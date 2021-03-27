@@ -1,2 +1,2 @@
 # pokemon-battle
-A Pokémon Battle and Pokedex game created by me
+A Pokémon Battle game created by me
