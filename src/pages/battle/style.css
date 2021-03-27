@@ -1,0 +1,396 @@
+
+body {
+    background-color: salmon;
+    font-family: 'Press Start 2P', cursive;
+}
+
+.cor-navbar {
+    background-color: rgb(255, 255, 255);
+    
+}
+
+.navbarText {
+    font-size: 14px;
+    color: black;
+    margin-right: 50px;
+}
+
+.navbarBorder {
+    border-style: solid;
+    border-radius: 5px; 
+}
+
+.bulbasaur {
+    float: left;
+    width: 350px;
+    margin-top: 100px;
+}
+
+.wartortle {
+    float: right;
+    width: 300px;
+    margin-top: 100px;
+}
+
+
+/* ------ -------------   MENU GAME */
+
+.menu {
+    font-size: 8px;
+    margin-top: 20px;
+    text-align: center;
+    color: white;
+    width: 450px;
+    margin:0 auto;
+    border-radius: 20px;
+    
+    margin-top: -115px;
+    padding: 20px 20px 50px 20px;
+    background-color: #1982c4;
+}
+
+.txtMenu {
+    font-size: 15px;
+}
+
+
+.toBattle {  
+    text-align: center;
+    font-size: 15px; 
+    margin-top: 40px; 
+    height: 60px;
+    width: 200px;
+    border-color: #f25f5c;
+    cursor: pointer;
+    background-color: #f25f5ced;
+    color: white;
+    border-radius: 5px;
+    font-family: 'Press Start 2P';
+}
+
+.toBattle:hover {
+	transition: 800ms;
+    font-size: 17px;
+    color: rgb(250, 250, 121);
+}
+
+
+.input {
+    margin-top: 30px;
+    margin-bottom: 15px;
+    height: 30px;
+    border-color: white;
+    font-family: 'Press Start 2P';
+    border-radius: 5px;
+    width: 200px;
+    font-size: 13px;
+}
+
+.input2 {
+    height: 30px;
+    border-color: white;
+    font-family: 'Press Start 2P';
+    border-radius: 5px;
+    width: 200px;
+    font-size: 13px;
+}
+
+.buttons {
+    height: 35px;
+    width: 50px;
+    border-color: #f25f5c;
+    cursor: pointer;
+    background-color: #f25f5ced;
+    color: white;
+    border-radius: 5px;
+    font-family: 'Press Start 2P';
+    font-size: 13px;
+}
+
+.buttons:hover {
+    transition: 400ms;
+    font-size: 15px;
+}
+
+/* ------ -------------   TELA */
+
+.power {
+    position: absolute;
+    margin-top: -55px;
+    margin-left: 20px;
+    font-size: 13px;
+    font-family:'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+    color: rgb(165, 165, 165);
+}
+
+
+.screen {
+    text-align: center;
+    height: 530px;
+	width:  530px;
+	background: rgb(240, 240, 240);
+    margin-top: 70px;
+	margin-right: auto;
+    margin-left: auto;
+	padding: 20px 20px 20px 20px; 
+
+    border-style:solid;
+    border-width: 50px;
+    border-color: #1982c4;
+    border-radius: 20px;
+
+}
+
+.ballImg {
+    width: 60px;
+}
+
+.marqueeBall {
+    margin-top: 20%;
+    width: 200px;
+    height: 90px;
+    text-align: center;
+    line-height: 30px;
+}
+
+.screenText {
+    margin-top: 5%;
+    font-size: 18px;
+    text-align: center;
+    line-height: 30px;
+}
+
+.winnerClass {
+    margin-top: 100px;
+}
+
+.winnerMensage {
+    font-size: 20px;
+    margin-top: 70px;
+    color: green;
+    border-style: dotted;
+    border-color: rgb(203, 206, 200);
+}
+
+
+/* ------ -------------   FIRST POKEMON */
+
+
+.imageFront  {
+    width: 180px;
+    transition: 1s;
+}
+
+.imageFront:hover {
+    width: 190px;
+}
+
+.dataPok {
+    float: left;
+    margin-left: 20px;
+    margin-top: 20px;
+    font-size: 9px;
+    line-height: 5px;
+}
+
+.dataPok h2 {
+    font-size: 15px;
+    margin-bottom: 20px;
+    font-weight: bold;
+}
+
+.lifeBar {
+    background-color: rgb(214, 214, 214);
+    margin-top: -15px;
+    margin-bottom: 10px;
+    height: 7px;
+}
+
+.life1 {
+    width: 100%;
+    margin-top: -15px;
+    margin-bottom: 10px;
+    height: 5px;
+    background-color: #ff7675;
+}
+
+.smokePok1 {
+    width: 120px;
+    margin-left: 140px;
+    margin-top: 50px;
+}
+
+/* ----   POKEBALL OPENING 1 */
+
+.openBall  {
+    width: 50px;
+    margin-left: 155px;
+    margin-top: 90px;
+}
+
+.ballCome {
+    width: 50px;
+    margin-left: 280px;
+    margin-top: 10px;
+}
+
+.ballCome2 {
+    width: 50px;
+    margin-left: 200px;
+    margin-top: 40px;
+}
+
+/* ------ -------------   SECOND POKEMON */
+
+.imageBack {
+    width: 200px;
+    float: left;
+    margin-top: 40px;
+    transition: 1s;
+}
+
+.imageBack:hover {
+    width: 210px;
+}
+
+.dataPok2 {
+    float: right;
+    margin-top: 100px;
+    margin-right: 25px;
+    margin-bottom: 20px;
+    font-size: 9px;
+    line-height: 5px;
+}
+
+.dataPok2 h2 {
+    font-size: 15px;
+    margin-bottom: 20px;
+    font-weight: bold;
+}
+
+.life2 {
+    width: 100%;
+    margin-top: -15px;
+    margin-bottom: 10px;
+    height: 5px;
+    background-color: #ff7675;
+}
+
+.smokePok2 {
+    width: 120px;
+    margin-left: -180px;
+    margin-top: 90px;
+}
+
+/* ----   POKEBALL OPENING 2 */
+
+.openBall2  {
+    width: 50px;
+    margin-left: -150px;
+    margin-top: 130px;
+}
+
+.ballComePok2 {
+    width: 50px;
+    margin-left: -270px;
+    margin-top: 150px;
+}
+
+.ballComePok2-2 {
+    width: 50px;
+    margin-left: -180px;
+    margin-top: 110px;
+}
+
+
+/* ------ -------------   RESPONSIVE */
+
+@media screen and (max-width: 1100px) {
+    .wartortle, .bulbasaur, .diglet {
+        display: none;
+    }
+}
+
+@media screen and (max-width: 600px) {
+    .navbarText {
+        font-size: 12px; 
+        margin-top: 10px;  
+    }
+
+    .power {
+        display: none;
+    }
+
+    .screen {
+        height: 400px;
+        width:  96%;
+        border-width: 10px;
+        margin-top: 100px;
+        border-radius: 0px;
+    }
+
+    .screenText {
+        font-size: 10px;
+    }
+
+    .menu {
+        margin-top: -100px;
+        border-radius: 0px;
+        width: 300px;
+    }
+
+    /* ------ ------   POKEMONS Responsive */
+
+    .dataPok {
+        font-size: 7px;
+    }
+
+    .dataPok2 {
+        margin-top: 80px;
+        font-size: 7px;
+        margin-right: 5px;
+    }
+    
+    .dataPok h2, .dataPok2 h2  {
+        font-size: 11px;
+    }
+
+    .imageFront  {
+        width: 150px;
+    }
+
+    .imageBack {
+        width: 160px;
+        margin-top: 50px;
+    }
+
+ }
+
+
+ /* ------ -------------   FOOTER */
+
+footer {
+    background-color: rgb(248, 98, 81);
+    text-align: center;
+    width: 100%;
+    height: 70px;
+    font-size: 10px;
+    color: white;
+    margin: auto auto auto auto;
+}
+
+.links {
+    margin-top: 50px;
+}
+
+.socialNet {
+    width: 30px;
+    margin-top: 10px;  
+    margin-bottom: 5px;
+}
+
+.socialNet:hover {
+    opacity: 0.5;
+	transition: 400ms;
+    cursor: pointer;
+}
