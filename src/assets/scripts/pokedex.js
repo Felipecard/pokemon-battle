@@ -86,17 +86,4 @@ const infoPok = (pokNumber) => {
 
 
 
-const menuExpand = () => {
-    
-    const menuAberto = true
-    if (menuAberto == true) {
-        document.querySelector('#showPoks').style.margin = '100px'
-        menuAberto = false
-    } else {
-        document.querySelector('#showPoks').style.margin = '0px'
-    }
-}
-
-
-
 
