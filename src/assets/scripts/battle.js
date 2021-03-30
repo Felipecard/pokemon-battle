@@ -2,9 +2,9 @@
 const search = () => {
 
     const pokName = document.getElementById('input').value
-
+    
    
-    const url = `https://pokeapi.co/api/v2/pokemon/${pokName}/`
+    const url = `https://pokeapi.co/api/v2/pokemon/${pokName.toLowerCase()}/`
     
     fetch(url) 
 
@@ -61,7 +61,7 @@ const search2 = () => {
     const pokName2 = document.getElementById('input2').value
 
    
-    const url2 = `https://pokeapi.co/api/v2/pokemon/${pokName2}/`
+    const url2 = `https://pokeapi.co/api/v2/pokemon/${pokName2.toLowerCase()}/`
     
 
     fetch(url2)
