@@ -1,5 +1,5 @@
 # Pokemon Battle 
-A Pokémon Battle game created for entertainment purposes
+A Pokémon Battle game created for entertainment purposes.
 
 ![ballOpen1](https://user-images.githubusercontent.com/57718840/113046816-e0494a00-9176-11eb-9251-576ab70dea62.png)
 
