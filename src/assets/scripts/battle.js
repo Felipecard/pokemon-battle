@@ -1,299 +1,427 @@
+const battleState = {
+    player: null,
+    opponent: null,
+    started: false,
+    finished: false,
+    currentTurn: null
+}
+
+const renderTimers = {
+    player: [],
+    opponent: []
+}
+
+const pokemonSides = {
+    player: {
+        inputId: 'input',
+        containerId: 'halfScreen',
+        pokemonId: 'pokemon1',
+        dataNameAttr: 'data-name1',
+        dataForceAttr: 'data-force',
+        dataTypeAttr: 'data-type',
+        dataClass: 'dataPok',
+        imageClass: 'imageFront',
+        lifeClass: 'life1',
+        spriteKey: 'front',
+        entryFrames: [
+            { delay: 0, className: 'ballCome', image: 1 },
+            { delay: 50, className: 'ballCome2', image: 1 },
+            { delay: 300, className: 'openBall', image: 1 },
+            { delay: 900, className: 'openBall', image: 2 },
+            { delay: 1200, className: 'openBall', image: 3 },
+            { delay: 1500, className: 'openBall', image: 4 }
+        ],
+        smokeClass: 'smokePok1'
+    },
+    opponent: {
+        inputId: 'input2',
+        containerId: 'halfScreen2',
+        pokemonId: 'pokemon2',
+        dataNameAttr: 'data-name2',
+        dataForceAttr: 'data-force2',
+        dataTypeAttr: 'data-type2',
+        dataClass: 'dataPok2',
+        imageClass: 'imageBack',
+        lifeClass: 'life2',
+        spriteKey: 'back',
+        entryFrames: [
+            { delay: 0, className: 'ballComePok2', image: 1 },
+            { delay: 50, className: 'ballComePok2-2', image: 1 },
+            { delay: 300, className: 'openBall2', image: 1 },
+            { delay: 900, className: 'openBall2', image: 2 },
+            { delay: 1200, className: 'openBall2', image: 3 },
+            { delay: 1500, className: 'openBall2', image: 4 }
+        ],
+        smokeClass: 'smokePok2'
+    }
+}
 
 const search = () => {
+    loadPokemon('player')
+}
 
-    const pokName = document.getElementById('input').value
-    
-   
+const search2 = () => {
+    loadPokemon('opponent')
+}
+
+const fight = () => {
+    if (!battleState.started || battleState.finished) {
+        startBattle()
+        return
+    }
+
+    executeTurn()
+}
+
+const loadPokemon = async (side) => {
+    const settings = pokemonSides[side]
+    const input = document.getElementById(settings.inputId)
+    const pokName = input.value.trim()
+
+    if (!pokName) {
+        showMessage('Enter a Pokemon name or number!')
+        return
+    }
+
+    try {
+        battleState[side] = null
+        resetBattle()
+        clearSideTimers(side)
+        clearMessage()
+
+        const data = await getPokemon(pokName)
+        const pokemon = normalizePokemon(data)
+
+        battleState[side] = pokemon
+        renderPokemon(pokemon, side)
+        console.log(data)
+    } catch (err) {
+        battleState[side] = null
+        resetBattle()
+        clearSideTimers(side)
+        document.getElementById(settings.containerId).innerHTML = ''
+        showMessage('Pokemon not found!')
+        console.log(err)
+    }
+}
+
+const getPokemon = async (pokName) => {
     const url = `https://pokeapi.co/api/v2/pokemon/${pokName.toLowerCase()}/`
-    
-    fetch(url) 
+    const response = await fetch(url)
 
-    .then(response => response.json())
-    .then(data => {
-    
-    element1 = document.getElementById('halfScreen')
+    if (!response.ok) {
+        throw new Error('Pokemon not found')
+    }
 
-    const name1 = data.name.charAt(0).toUpperCase() + data.name.slice(1)
-    const kg = data.weight / 2.205 
-    const kgRound = kg.toFixed(0)
-    const force = data.base_experience
-    const number = data.id
+    return response.json()
+}
 
-    const type = data.types[0].type.name
+const normalizePokemon = (data) => {
+    const stats = normalizeStats(data.stats)
+
+    return {
+        id: data.id,
+        name: capitalize(data.name),
+        weightKg: (data.weight / 2.205).toFixed(0),
+        force: calculateBattlePower(stats),
+        maxHp: stats.hp,
+        currentHp: stats.hp,
+        type: data.types[0].type.name,
+        sprites: {
+            front: data.sprites.front_default,
+            back: data.sprites.back_default || data.sprites.front_default
+        },
+        stats,
+        ready: false
+    }
+}
+
+const renderPokemon = (pokemon, side) => {
+    const settings = pokemonSides[side]
+    const container = document.getElementById(settings.containerId)
 
     document.querySelector('#powerId').style.color = 'rgb(121, 255, 121)'
     document.querySelector('#textScreen').style.display = 'none'
     document.querySelector('#ball').style.display = 'none'
 
-    setTimeout(function() {element1.innerHTML = `<img class='ballCome' src='../../assets/img/ballOpen1.png'>`}, 0)
-    setTimeout(function() {element1.innerHTML = `<img class='ballCome2' src='../../assets/img/ballOpen1.png'>`}, 50)
-    setTimeout(function() {element1.innerHTML = `<img class='openBall' src='../../assets/img/ballOpen1.png'>`}, 300)
-    setTimeout(function() {element1.innerHTML = `<img class='openBall' src='../../assets/img/ballOpen2.png'>`}, 900)
-    setTimeout(function() {element1.innerHTML = `<img class='openBall' src='../../assets/img/ballOpen3.png'>`}, 1200)
-    setTimeout(function() {element1.innerHTML = `<img class='openBall' src='../../assets/img/ballOpen4.png'>`}, 1500)
+    settings.entryFrames.forEach((frame) => {
+        scheduleRender(side, frame.delay, () => {
+            container.innerHTML = `<img class='${frame.className}' src='${getBallImage(frame.image)}'>`
+        })
+    })
 
-    setTimeout(function() {element1.innerHTML = `
-        <div id='pokemon1' data-name1='${name1}' data-force='${force}' data-type='${type}'>
-            <div class='dataPok'>
-                <h2>${name1}</h2>
-                <div class='lifeBar'><div class='life1'></div></div>
-                <p>No: ${number}</p>
-                <p>Weight: ${kgRound} Kg</p>
-                <p>Type: ${type}</p>
+    scheduleRender(side, 1800, () => {
+        container.innerHTML = getPokemonMarkup(pokemon, settings)
+        pokemon.ready = true
+    })
+}
+
+const getPokemonMarkup = (pokemon, settings) => {
+    return `
+        <div id='${settings.pokemonId}' class='pokemonBattleCard' ${settings.dataNameAttr}='${pokemon.name}' ${settings.dataForceAttr}='${pokemon.force}' ${settings.dataTypeAttr}='${pokemon.type}'>
+            <div class='${settings.dataClass}'>
+                <h2><span class='turnArrow'></span>${pokemon.name}</h2>
+                <div class='lifeBar'><div class='${settings.lifeClass}'></div></div>
+                <p class='hpText'>HP: ${pokemon.currentHp}/${pokemon.maxHp}</p>
+                <p>No: ${pokemon.id}</p>
+                <p>Type: ${pokemon.type}</p>
             </div>
-            <img class='imageFront' src='${data.sprites.front_default}'>
+            <img class='${settings.imageClass}' src='${pokemon.sprites[settings.spriteKey]}'>
         </div>
-        `
-    console.log(data)
-
-
-}, 1800) })
-
-.catch(err => console.log(err))
-
-
-}
-
-
-
-const search2 = () => {
-
-    const pokName2 = document.getElementById('input2').value
-
-   
-    const url2 = `https://pokeapi.co/api/v2/pokemon/${pokName2.toLowerCase()}/`
-    
-
-    fetch(url2)
-
-
-    .then(response2 => response2.json())
-    .then(data2 => {
-    
-    element2 = document.getElementById('halfScreen2')
-
-    const name2 = data2.name.charAt(0).toUpperCase() + data2.name.slice(1)
-    const kg2 = data2.weight / 2.205 
-    const kgRound2 = kg2.toFixed(0)
-    const force2 = data2.base_experience
-    const number2 = data2.id
-
-    const type2 = data2.types[0].type.name
-
-   
-    document.querySelector('#ball').style.display = 'none'
-    document.querySelector('#textScreen').style.display = 'none'
-
-    setTimeout(function() {element2.innerHTML = `<img class='ballComePok2' src='../../assets/img/ballOpen1.png'>`}, 0)
-    setTimeout(function() {element2.innerHTML = `<img class='ballComePok2-2' src='../../assets/img/ballOpen1.png'>`}, 50)
-    setTimeout(function() {element2.innerHTML = `<img class='openBall2' src='../../assets/img/ballOpen1.png'>`}, 300)
-    setTimeout(function() {element2.innerHTML = `<img class='openBall2' src='../../assets/img/ballOpen2.png'>`}, 900)
-    setTimeout(function() {element2.innerHTML = `<img class='openBall2' src='../../assets/img/ballOpen3.png'>`}, 1200)
-    setTimeout(function() {element2.innerHTML = `<img class='openBall2' src='../../assets/img/ballOpen4.png'>`}, 1500)
-
-    setTimeout(function() {element2.innerHTML = `
-
-    <div id='pokemon2' data-name2='${name2}' data-force2='${force2}' data-type2='${type2}'>
-        <div class='dataPok2'>
-            <h2>${name2}</h2>
-            <div class='lifeBar'><div class='life2'></div></div>
-            <p>No: ${number2}</p>
-            <p>Weight: ${kgRound2} Kg</p>
-            <p>Type: ${type2}</p>
-        </div>
-
-        <img class='imageBack' src='${data2.sprites.back_default}'></img>
-    </div>
     `
-
-}, 1800) })
-
-.catch(err2 => console.log(err2))
- 
 }
 
+const normalizeStats = (apiStats) => {
+    const stats = apiStats.reduce((acc, item) => {
+        acc[item.stat.name] = item.base_stat
+        return acc
+    }, {})
 
-
-const fight = () => {
-
-    const pokemon1 = document.querySelector('#pokemon1')
-    var pokemon1Force = parseInt(pokemon1.dataset.force)
-    const namePok1 = pokemon1.dataset.name1
-
-    const typePokemon1 = pokemon1.dataset.type
-    
-    
-
-    const pokemon2 = document.querySelector('#pokemon2')
-    var pokemon2Force = parseInt(pokemon2.dataset.force2)
-    const namePok2 = pokemon2.dataset.name2
-
-    const typePokemon2 = pokemon2.dataset.type2
-    
-    console.log(pokemon1Force)
-    console.log(pokemon2Force)
-
-    var pokemon1Advantage = pokemon1Force
-    var pokemon2Advantage = pokemon2Force
-
-
-    if (typePokemon1 === 'water' && (typePokemon2 == 'fire' || typePokemon2 == 'ground' || typePokemon2 == 'rock')) {
-        pokemon1Advantage = pokemon1Force + 40
-        console.log('WATER+')
-    } else if (typePokemon1 === 'water' && (typePokemon2 === 'electric' || typePokemon2 === 'grass')) {
-        pokemon1Advantage = pokemon1Force - 40
-        console.log('WATER-')
-    }
-
-    if (typePokemon1 === 'fire' && (typePokemon2 === 'grass' || typePokemon2 === 'bug' || typePokemon2 === 'ice')) {
-        pokemon1Advantage = pokemon1Force + 40
-        console.log('FIRE+')
-    } else if (typePokemon1 === 'fire' && (typePokemon2 === 'rock' || typePokemon2 === 'ground' || typePokemon2 === 'water')) {
-        pokemon1Advantage = pokemon1Force - 40
-        console.log('FIRE-')
-    }
-    
-    if (typePokemon1 === 'grass' && (typePokemon2 === 'ground' || typePokemon2 === 'water' || typePokemon2 === 'rock')) {
-        pokemon1Advantage = pokemon1Force + 40
-        console.log('GRASS+')
-    } else if (typePokemon1 === 'grass' && (typePokemon2 === 'bug' || typePokemon2 === 'fire' || typePokemon2 === 'ice')) {
-        pokemon1Advantage = pokemon1Force - 40
-        console.log('GRASS-')
-    }
-
-    if (typePokemon1 === 'electric' && typePokemon2 === 'water') {
-        pokemon1Advantage = pokemon1Force + 40
-        console.log('ELECTRIC+')
-    } else if (typePokemon1 === 'electric' && typePokemon2 === 'ground') {
-        pokemon1Advantage = pokemon1Force - 40
-        console.log('ELECTRIC-')
-    }
-
-    if (typePokemon1 === 'ice' && (typePokemon2 === 'dragon' || typePokemon2 === 'grass' || typePokemon2 === 'ground')) {
-        pokemon1Advantage = pokemon1Force + 40
-        console.log('ICE+')
-    } else if (typePokemon1 === 'ice' && (typePokemon2 === 'fighting' || typePokemon2 === 'fire' || typePokemon2 === 'rock')) {
-        pokemon1Advantage = pokemon1Force - 40
-        console.log('ICE-')
-    }   
-
-    if (typePokemon1 === 'rock' && (typePokemon2 === 'bug' || typePokemon2 === 'fire' || typePokemon2 === 'electric')) {
-        pokemon1Advantage = pokemon1Force + 40
-        console.log('ROCK+')
-    } else if (typePokemon1 === 'rock' && (typePokemon2 === 'fighting' || typePokemon2 === 'grass' || typePokemon2 === 'water')) {
-        pokemon1Advantage = pokemon1Force - 40
-        console.log('ROCK-')
-    }   
-
-    if (typePokemon1 === 'ground' && (typePokemon2 === 'electric' || typePokemon2 === 'fire' || typePokemon2 === 'rock')) {
-        pokemon1Advantage = pokemon1Force + 40
-        console.log('GROUND+')
-    } else if (typePokemon1 === 'ground' && (typePokemon2 === 'ice' || typePokemon2 === 'grass' || typePokemon2 === 'water')) {
-        pokemon1Advantage = pokemon1Force - 40
-        console.log('GROUND-')
-    }   
-
-    if (typePokemon1 === 'fighting' && (typePokemon2 === 'ice' || typePokemon2 === 'normal' || typePokemon2 === 'rock')) {
-        pokemon1Advantage = pokemon1Force + 40
-        console.log('FIGHTING+')
-    } else if (typePokemon1 === 'fighting' && (typePokemon2 === 'fairy' || typePokemon2 === 'psychic')) {
-        pokemon1Advantage = pokemon1Force - 40
-        console.log('FIGHTING-')
-    }   
-
-    if (typePokemon1 === 'psychic' && (typePokemon2 === 'poison' || typePokemon2 === 'fighting')) {
-        pokemon1Advantage = pokemon1Force + 40
-        console.log('PSYCHIC+')
-    } else if (typePokemon1 === 'psychic' && (typePokemon2 === 'bug' || typePokemon2 === 'ghost')) {
-        pokemon1Advantage = pokemon1Force - 40
-        console.log('PSYCHIC-')
-    }   
-
-    if (typePokemon1 === 'poison' && (typePokemon2 === 'fairy' || typePokemon2 === 'grass')) {
-        pokemon1Advantage = pokemon1Force + 40
-        console.log('POISON+')
-    } else if (typePokemon1 === 'poison' && (typePokemon2 === 'ground' || typePokemon2 === 'psychic')) {
-        pokemon1Advantage = pokemon1Force - 40
-        console.log('POISON-')
-    }   
-
-    if (typePokemon1 === 'bug' && (typePokemon2 === 'psychic' || typePokemon2 === 'grass')) {
-        pokemon1Advantage = pokemon1Force + 40
-        console.log('BUG+')
-    } else if (typePokemon1 === 'bug' && (typePokemon2 === 'fire' || typePokemon2 === 'rock')) {
-        pokemon1Advantage = pokemon1Force - 40
-        console.log('BUG-')
-    }   
-
-    if (typePokemon1 === 'fairy' && (typePokemon2 === 'dragon' || typePokemon2 === 'fighting')) {
-        pokemon1Advantage = pokemon1Force + 40
-        console.log('FAIRY+')
-    } else if (typePokemon1 === 'fairy' && typePokemon2 === 'ghost') {
-        pokemon1Advantage = pokemon1Force - 40
-        console.log('FAIRY-')
-    }   
-
-    if (typePokemon1 === 'ghost' && (typePokemon2 === 'psychic' || typePokemon2 === 'ghost' || typePokemon2 === 'fighting')) {
-        pokemon1Advantage = pokemon1Force + 40
-        console.log('GHOST+')
-    } 
-
-    if (typePokemon1 === 'dragon' && (typePokemon2 === 'fairy' || typePokemon2 === 'ice')) {
-        pokemon1Advantage = pokemon1Force - 40
-        console.log('DRAGON-')
-    }
-
-
-    console.log(pokemon1Advantage)
-    console.log(pokemon2Advantage)
-
-    
-
-
- 
-    if (pokemon1Advantage > pokemon2Advantage) {  
-
-        setTimeout(function() {document.querySelector('.life2').style.width = '80%'}, 200)
-        setTimeout(function() {document.querySelector('.life2').style.width = '50%'}, 500)
-        setTimeout(function() {document.querySelector('.life2').style.width = '20%'}, 800)
-        setTimeout(function() {document.querySelector('.life1').style.width = '60%'}, 800)
-        
-        setTimeout(function() {element2.innerHTML = `<img class='smokePok2' src='../../assets/img/smoke1.png'>`}, 1200)
-        setTimeout(function() {element2.innerHTML = `<img class='smokePok2' src='../../assets/img/smoke2.png'>`}, 1600)
-        setTimeout(function() {element2.innerHTML = `<img class='smokePok2' src='../../assets/img/smoke3.png'>`}, 2000)
-
-        setTimeout(function() {element2.innerHTML = 
-            `
-            <marquee direction="right" behavior="alternate" class="winnerMensage">
-                ${namePok1} win!
-            </marquee>
-            `
-
-            document.querySelector('.imageFront .dataPok').style.display = 'none'
-
-        }, 2400)
-    
-    } else {
-
-        setTimeout(function() {document.querySelector('.life1').style.width = '80%'}, 200)
-        setTimeout(function() {document.querySelector('.life1').style.width = '50%'}, 500)
-        setTimeout(function() {document.querySelector('.life1').style.width = '20%'}, 800)
-        setTimeout(function() {document.querySelector('.life2').style.width = '60%'}, 800)
-
-        setTimeout(function() {element1.innerHTML = `<img class='smokePok1' src='../../assets/img/smoke1.png'>`}, 1200)
-        setTimeout(function() {element1.innerHTML = `<img class='smokePok1' src='../../assets/img/smoke2.png'>`}, 1600)
-        setTimeout(function() {element1.innerHTML = `<img class='smokePok1' src='../../assets/img/smoke3.png'>`}, 2000)
-
-        setTimeout(function() {element1.innerHTML = 
-            `
-            <marquee direction="right" behavior="alternate" class="winnerMensage">
-                ${namePok2} win!
-            </marquee>
-            `
-            document.querySelector('.imageBack .dataPok2').style.display = 'none'  
-
-        }, 2400)
-
+    return {
+        hp: stats.hp || 0,
+        attack: stats.attack || 0,
+        defense: stats.defense || 0,
+        specialAttack: stats['special-attack'] || 0,
+        specialDefense: stats['special-defense'] || 0,
+        speed: stats.speed || 0
     }
 }
 
+const calculateBattlePower = (stats) => {
+    return stats.hp
+        + stats.attack
+        + stats.defense
+        + stats.specialAttack
+        + stats.specialDefense
+        + stats.speed
+}
+
+const startBattle = () => {
+    const pokemon1 = battleState.player
+    const pokemon2 = battleState.opponent
+
+    if (!pokemon1 || !pokemon2 || !pokemon1.ready || !pokemon2.ready) {
+        showMessage('Choose two Pokemon before battle!')
+        return
+    }
+
+    pokemon1.currentHp = pokemon1.maxHp
+    pokemon2.currentHp = pokemon2.maxHp
+    battleState.started = true
+    battleState.finished = false
+    battleState.currentTurn = chooseFirstTurn(pokemon1, pokemon2)
+
+    clearMessage()
+    clearBattleLog()
+    setBattleButton('ATTACK', false)
+    updateHpBar('player')
+    updateHpBar('opponent')
+    updateTurnIndicator()
+
+    addBattleLog('A batalha começou!')
+    addBattleLog(getFirstTurnMessage())
+}
+
+const executeTurn = () => {
+    if (!battleState.started || battleState.finished) {
+        return
+    }
+
+    const attackerSide = battleState.currentTurn
+    const defenderSide = getOpponentSide(attackerSide)
+    const attacker = battleState[attackerSide]
+    const defender = battleState[defenderSide]
+    const damage = calculateDamage(attacker, defender)
+
+    defender.currentHp = Math.max(defender.currentHp - damage, 0)
+    updateHpBar(defenderSide)
+
+    addBattleLog(`${attacker.name} atacou ${defender.name}!`)
+    addBattleLog(`${defender.name} perdeu ${damage} HP.`)
+
+    if (defender.currentHp === 0) {
+        addBattleLog(`${defender.name} foi derrotado!`)
+        finishBattle(attackerSide)
+        return
+    }
+
+    battleState.currentTurn = defenderSide
+    updateTurnIndicator()
+}
+
+const calculateDamage = (attacker, defender) => {
+    const rawDamage = attacker.stats.attack - Math.floor(defender.stats.defense / 2)
+    return Math.max(rawDamage, 5)
+}
+
+const updateHpBar = (side) => {
+    const pokemon = battleState[side]
+    const settings = pokemonSides[side]
+    const pokemonElement = document.getElementById(settings.pokemonId)
+    const lifeBar = pokemonElement && pokemonElement.querySelector(`.${settings.lifeClass}`)
+    const hpText = pokemonElement && pokemonElement.querySelector('.hpText')
+
+    if (!pokemon || !pokemonElement || !lifeBar || !hpText) {
+        return
+    }
+
+    const hpPercent = Math.max((pokemon.currentHp / pokemon.maxHp) * 100, 0)
+
+    lifeBar.style.width = `${hpPercent}%`
+    hpText.textContent = `HP: ${pokemon.currentHp}/${pokemon.maxHp}`
+}
+
+const updateTurnIndicator = () => {
+    const turnInfo = document.getElementById('turnInfo')
+    const currentPokemon = battleState[battleState.currentTurn]
+
+    Object.keys(pokemonSides).forEach((side) => {
+        const pokemonElement = document.getElementById(pokemonSides[side].pokemonId)
+
+        if (pokemonElement) {
+            pokemonElement.classList.toggle('activeTurn', side === battleState.currentTurn && !battleState.finished)
+        }
+    })
+
+    if (turnInfo) {
+        turnInfo.textContent = currentPokemon && !battleState.finished
+            ? `Vez de: ${currentPokemon.name}`
+            : ''
+    }
+}
+
+const addBattleLog = (message) => {
+    const battleLog = document.getElementById('battleLog')
+
+    if (!battleLog) {
+        return
+    }
+
+    battleLog.innerHTML += `<p>${message}</p>`
+    battleLog.scrollTop = battleLog.scrollHeight
+}
+
+const finishBattle = (winnerSide) => {
+    const winner = battleState[winnerSide]
+    const loserSide = getOpponentSide(winnerSide)
+
+    battleState.finished = true
+    battleState.currentTurn = null
+    updateTurnIndicator()
+    addBattleLog(`${winner.name} venceu a batalha!`)
+    animateDefeat(loserSide, winner.name)
+    setBattleButton('BATTLE OVER', true)
+}
+
+const animateDefeat = (loserSide, winnerName) => {
+    const settings = pokemonSides[loserSide]
+    const container = document.getElementById(settings.containerId)
+
+    if (!container) {
+        return
+    }
+
+    const smokeImages = [1, 2, 3]
+
+    smokeImages.forEach((image, index) => {
+        setTimeout(() => {
+            container.innerHTML = `<img class='${settings.smokeClass}' src='../../assets/img/smoke${image}.png'>`
+        }, 400 + index * 400)
+    })
+
+    setTimeout(() => {
+        container.innerHTML = `
+            <marquee direction="right" behavior="alternate" class="winnerMensage">
+                ${winnerName} win!
+            </marquee>
+        `
+    }, 1700)
+}
+
+const chooseFirstTurn = (pokemon1, pokemon2) => {
+    if (pokemon1.stats.speed > pokemon2.stats.speed) {
+        return 'player'
+    }
+
+    if (pokemon2.stats.speed > pokemon1.stats.speed) {
+        return 'opponent'
+    }
+
+    return Math.random() < 0.5 ? 'player' : 'opponent'
+}
+
+const getFirstTurnMessage = () => {
+    const currentPokemon = battleState[battleState.currentTurn]
+    const opponentPokemon = battleState[getOpponentSide(battleState.currentTurn)]
+
+    if (currentPokemon.stats.speed === opponentPokemon.stats.speed) {
+        return `${currentPokemon.name} começa por sorte no empate de velocidade!`
+    }
+
+    return `${currentPokemon.name} começa por ser mais rápido!`
+}
+
+const getOpponentSide = (side) => {
+    return side === 'player' ? 'opponent' : 'player'
+}
+
+const resetBattle = () => {
+    battleState.started = false
+    battleState.finished = false
+    battleState.currentTurn = null
+    setBattleButton('TO BATTLE', false)
+    clearBattleLog()
+    updateTurnIndicator()
+}
+
+const clearBattleLog = () => {
+    const battleLog = document.getElementById('battleLog')
+    const turnInfo = document.getElementById('turnInfo')
+
+    if (battleLog) {
+        battleLog.innerHTML = ''
+    }
+
+    if (turnInfo) {
+        turnInfo.textContent = ''
+    }
+}
+
+const setBattleButton = (text, disabled) => {
+    const button = document.querySelector('.toBattle')
+
+    if (button) {
+        button.textContent = text
+        button.disabled = disabled
+    }
+}
+
+const scheduleRender = (side, delay, callback) => {
+    const timer = setTimeout(callback, delay)
+    renderTimers[side].push(timer)
+}
+
+const clearSideTimers = (side) => {
+    renderTimers[side].forEach((timer) => clearTimeout(timer))
+    renderTimers[side] = []
+}
+
+const clearMessage = () => {
+    document.getElementById('winner').innerHTML = ''
+}
+
+const showMessage = (message) => {
+    document.getElementById('winner').innerHTML = `
+        <marquee direction="right" behavior="alternate" class="winnerMensage">
+            ${message}
+        </marquee>
+    `
+}
+
+const getBallImage = (image) => {
+    return `../../assets/img/ballOpen${image}.png`
+}
+
+const capitalize = (value) => {
+    return value.charAt(0).toUpperCase() + value.slice(1)
+}
