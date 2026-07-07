@@ -173,6 +173,29 @@ body {
     opacity: 0.55;
 }
 
+.aiDifficultyControls {
+    display: flex;
+    justify-content: center;
+    margin-top: 12px;
+}
+
+.instantKoButton {
+    min-height: 28px;
+    padding: 6px 12px;
+    color: white;
+    background-color: #f25f5c;
+    border: 2px solid #f25f5c;
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: 'Press Start 2P';
+    font-size: 7px;
+}
+
+.instantKoButton:hover {
+    background-color: #1982c4;
+    border-color: #1982c4;
+}
+
 .teamSummary {
     display: none;
     align-items: center;
@@ -214,8 +237,8 @@ body {
 
 .toBattle:hover {
 	transition: 800ms;
-    font-size: 17px;
-    color: rgb(250, 250, 121);
+    font-size: 16px;
+    color: rgb(204, 203, 203);
 }
 
 .toBattle:disabled {
@@ -248,8 +271,20 @@ body {
     height: 165px;
 }
 
-.battleLog p {
+.battleLogMessage {
     margin: 0 0 8px 0;
+}
+
+.battleLogError {
+    color: #f25f5c;
+}
+
+.battleLogSuccess {
+    color: #159447;
+}
+
+.battleLogInfo {
+    color: #1982c4;
 }
 
 .moveButtons {
@@ -423,6 +458,56 @@ body {
     color: rgb(121, 255, 121);
 }
 
+.muteButton {
+    position: absolute;
+    right: 9px;
+    margin-top: -55px;
+    font-size: 13px;
+    font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+    color: #f25f5c;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.muteButton:hover {
+    color: #f25f5c;
+}
+
+.muteToggle {
+    position: relative;
+    width: 24px;
+    height: 12px;
+    background-color: white;
+    border: 1px solid black;
+    border-radius: 10px;
+}
+
+.muteToggle::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 13px;
+    width: 6px;
+    height: 6px;
+    background-color: black;
+    border-radius: 50%;
+    transition: 180ms;
+}
+
+.muteButton.muted .muteToggle {
+    background-color: black;
+}
+
+.muteButton.muted .muteToggle::after {
+    left: 3px;
+    background-color: white;
+}
+
 
 .screen {
     position: relative;
@@ -502,7 +587,7 @@ body {
 }
 
 .marqueeBall {
-    margin-top: 20%;
+    margin-top: 0%;
     width: 200px;
     height: 90px;
     text-align: center;
@@ -514,10 +599,37 @@ body {
 }
 
 .galeIntroText {
+    margin-top: 25px;
     margin-bottom: 4px;
     color: black;
+    font-size: 20px;
+    line-height: 22px;
+}
+
+.trainerChallengeText {
+    max-width: 390px;
+    margin: 72px auto 6px auto;
+    color: black;
     font-size: 11px;
-    line-height: 18px;
+    line-height: 14px;
+}
+
+.trainerAiText {
+    margin: 8px auto 0 auto;
+    font-size: 11px;
+    line-height: 14px;
+}
+
+.trainerAiText.easy {
+    color: #159447;
+}
+
+.trainerAiText.medium {
+    color: #1982c4;
+}
+
+.trainerAiText.hard {
+    color: #f25f5c;
 }
 
 .screenText {
@@ -526,6 +638,43 @@ body {
     max-width: 180px;
     max-height: 230px;
     object-fit: contain;
+}
+
+.trainerChallengeImage {
+    animation: trainerChallengeEnter 700ms ease-out both;
+}
+
+@keyframes trainerChallengeEnter {
+    from {
+        opacity: 0;
+        transform: translateY(70px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.championTitle {
+    margin-top: 22px;
+    margin-bottom: 10px;
+    color: #1982c4;
+    font-size: 17px;
+    line-height: 24px;
+}
+
+.championSubtitle {
+    max-width: 390px;
+    margin: 0 auto 8px auto;
+    color: black;
+    font-size: 9px;
+    line-height: 15px;
+}
+
+.championAsh {
+    max-width: 210px;
+    max-height: 260px;
 }
 
 .trainerGale {
@@ -546,6 +695,8 @@ body {
 
 .battleResultTrainer {
     display: flex;
+    flex-direction: column;
+    align-items: center;
     justify-content: center;
     min-height: 175px;
 }
@@ -555,6 +706,104 @@ body {
     max-height: 210px;
     object-fit: contain;
     image-rendering: pixelated;
+}
+
+.battleResultTrainer span {
+    align-self: center;
+    color: #1982c4;
+    font-family: 'Press Start 2P';
+    font-size: 18px;
+    line-height: 28px;
+}
+
+.ashWinResult {
+    display: block;
+    max-width: 120px;
+    max-height: 140px;
+    margin: 10px auto 0 auto;
+    object-fit: contain;
+    image-rendering: pixelated;
+}
+
+.journeyVictoryScreen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 360px;
+}
+
+.journeyProgressPanel {
+    width: min(94%, 430px);
+    margin: 18px auto 0 auto;
+}
+
+.journeyVictoryText {
+    margin: 6px auto 0 auto;
+    color: #159447;
+    font-size: 20px;
+    line-height: 18px;
+}
+
+.journeyFaceRow {
+    margin-top: 42px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: clamp(6px, 1.4vw, 14px);
+    flex-wrap: wrap;
+}
+
+.journeyFace {
+    position: relative;
+    width: clamp(44px, 8vw, 58px);
+    height: clamp(44px, 8vw, 58px);
+    overflow: hidden;
+    background-color: #eef8ff;
+    border-radius: 4px;
+}
+
+.journeyFace img {
+    background-color: #ced4da;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    image-rendering: pixelated;
+}
+
+.journeyFace.defeated::after {
+    content: "×";
+    position: absolute;
+    left: -2px;
+    top: 6px;
+    color: #212529;
+    font-size: 72px;
+    line-height: 56px;
+    opacity: 0;
+    transform: scale(1.8);
+    animation: journeyXEnter 500ms ease-out 1s forwards, journeyXBlink 850ms steps(2, start) 1600ms infinite;
+}
+
+@keyframes journeyXEnter {
+    from {
+        opacity: 0;
+        transform: scale(1.8);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes journeyXBlink {
+    0%, 100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.25;
+    }
 }
 
 .machineResult {
@@ -759,9 +1008,37 @@ body {
         padding: 9px 12px;
     }
 
+    .aiDifficultyControls {
+        justify-content: center;
+    }
+
+    .instantKoButton {
+        width: 100%;
+    }
+
+    .journeyVictoryScreen {
+        min-height: 300px;
+    }
+
+    .journeyProgressPanel {
+        width: 100%;
+        margin-top: 12px;
+    }
+
+    .journeyFace {
+        width: 38px;
+        height: 38px;
+    }
+
     .power {
         margin-top: -30px;
         margin-left: 8px;
+        font-size: 11px;
+    }
+
+    .muteButton {
+        right: 8px;
+        margin-top: -30px;
         font-size: 11px;
     }
 

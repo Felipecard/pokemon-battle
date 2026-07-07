@@ -11,7 +11,107 @@ const battleState = {
     selectingMachine: false,
     machineThinking: false,
     waitingForPlayerSwitch: false,
+    aiDifficulty: 'medium',
+    muted: false,
     resetToken: 0
+}
+
+const aiDifficultyLabels = {
+    easy: 'Fácil',
+    medium: 'Média',
+    hard: 'Difícil'
+}
+
+const teamDifficultyProfiles = {
+    easy: {
+        label: 'mais fraco',
+        firstRange: [0.55, 0.9],
+        secondRange: [0.45, 1],
+        targetMultiplier: 0.75
+    },
+    medium: {
+        label: 'equilibrado',
+        firstRange: [0.85, 1.15],
+        secondRange: [0.75, 1.25],
+        targetMultiplier: 1
+    },
+    hard: {
+        label: 'mais forte',
+        firstRange: [1.1, 1.55],
+        secondRange: [1, 1.75],
+        targetMultiplier: 1.35
+    }
+}
+
+const journeyState = {
+    isJourneyMode: true,
+    currentTrainerIndex: 0,
+    completedTrainers: [],
+    continueUsed: false,
+    phase: 'setup',
+    result: null,
+    trainers: [
+        {
+            name: 'Mariner',
+            difficulty: 'easy',
+            theme: 'water',
+            challengeText: 'The waves always reveal who is ready to fight.',
+            defeatText: 'Você navegou melhor do que eu esperava.',
+            image: '../../assets/img/trainer_mariner.png',
+            face: '../../assets/img/face-mariner.png',
+            index: 0
+        },
+        {
+            name: 'Uiryhs',
+            difficulty: 'easy',
+            theme: 'storm',
+            challengeText: 'The Dragon and my old master are leading the way. I want to see if you can keep up.',
+            defeatText: 'Você resistiu à tempestade.',
+            image: '../../assets/img/trainer_gale.png',
+            face: '../../assets/img/face-gale.png',
+            index: 1
+        },
+        {
+            name: 'Orochi',
+            difficulty: 'medium',
+            theme: 'shadow',
+            challengeText: 'The fear of death is a human weakness... Let me show you the true value of eternal power.',
+            defeatText: 'Você passou pelo meu teste.',
+            image: '../../assets/img/maru.png',
+            face: '../../assets/img/face-maru.png',
+            index: 2
+        },
+        {
+            name: 'Fisherman',
+            difficulty: 'medium',
+            theme: 'river',
+            challengeText: 'Fishing requires patience. So does battle.',
+            defeatText: 'Você fisgou uma grande vitória.',
+            image: '../../assets/img/fisherman.png',
+            face: '../../assets/img/face-fisherman.png',
+            index: 3
+        },
+        {
+            name: 'Sword Lord',
+            difficulty: 'hard',
+            theme: 'blade',
+            challengeText: 'A blade recognizes only those who fight with honor.',
+            defeatText: 'Sua coragem cortou até o silêncio.',
+            image: '../../assets/img/swordlord.png',
+            face: '../../assets/img/face-lordsword.png',
+            index: 4
+        },
+        {
+            name: 'Old Gary',
+            difficulty: 'hard',
+            theme: 'champion',
+            challengeText: 'Hello old friend, you have come a long way. Now prove you deserve the top.',
+            defeatText: 'Hmph... nada mal. Talvez você seja mesmo um campeão.',
+            image: '../../assets/img/ond-gary.png',
+            face: '../../assets/img/face-gary.png',
+            index: 5
+        }
+    ]
 }
 
 const pokemonCandidateCache = {}
@@ -22,7 +122,14 @@ const sounds = {
     start: new Audio('../../assets/sounds/start.mp3'),
     choose: new Audio('../../assets/sounds/choose.mp3'),
     attack: new Audio('../../assets/sounds/choose_atack.mp3'),
-    lose: new Audio('../../assets/sounds/lose.mp3'),
+    failAttack: new Audio('../../assets/sounds/fail-atack.mp3'),
+    cry: new Audio('../../assets/sounds/cry.mp3'),
+    deathPok: new Audio('../../assets/sounds/death-pok.mp3'),
+    pokeballOpen: new Audio('../../assets/sounds/pokeball-open.mp3'),
+    songBattle: new Audio('../../assets/sounds/song-battle.mp3'),
+    finishGame: new Audio('../../assets/sounds/finish-game-congrats.mp3'),
+    xEnter: new Audio('../../assets/sounds/x-enter.mp3'),
+    lose: new Audio('../../assets/sounds/lost-battle.mp3'),
     win: new Audio('../../assets/sounds/victory.mp3')
 }
 
@@ -91,16 +198,21 @@ const search2 = () => {
 
 const fight = () => {
     if (battleState.finished) {
-        resetFullBattle()
+        handleJourneyButtonAction()
+        return
+    }
+
+    if (journeyState.phase === 'trainerIntro') {
+        startTrainerBattle()
         return
     }
 
     if (!battleState.started) {
-        startThreeVsThreeBattle()
+        loadTrainerBattle(journeyState.currentTrainerIndex)
         return
     }
 
-    addBattleLog('Escolha um golpe para atacar.')
+    addBattleLog('Escolha um golpe para atacar.', 'error')
 }
 
 const addPokemonToPlayerTeam = async (slotIndex) => {
@@ -118,7 +230,7 @@ const addPokemonToPlayerTeam = async (slotIndex) => {
     }
 
     if (!pokName) {
-        showMessage('Enter a Pokemon name or number!')
+        showMessage('Enter a Pokemon name or number!', 'error')
         return
     }
 
@@ -138,9 +250,9 @@ const addPokemonToPlayerTeam = async (slotIndex) => {
         renderPlayerTeamSlots()
         renderTeamSummary()
         updateStartButton()
-        addBattleLog(`${pokemon.name} entrou no slot ${slotIndex + 1}!`)
+        addBattleLog(`${pokemon.name} entrou no slot ${slotIndex + 1}!`, 'success')
     } catch (err) {
-        showMessage('Pokemon not found!')
+        showMessage('Pokemon not found!', 'error')
         console.log(err)
     } finally {
         setSearchControls(false)
@@ -250,9 +362,9 @@ const chooseRandomPlayerTeam = async () => {
         renderPlayerTeamSlots()
         renderTeamSummary()
         updateStartButton()
-        addBattleLog('Seu time aleatório foi escolhido!')
+        addBattleLog('Seu time aleatório foi escolhido!', 'success')
     } catch (err) {
-        showMessage('Could not choose a random team!')
+        showMessage('Could not choose a random team!', 'error')
         console.log(err)
     } finally {
         setSearchControls(false)
@@ -276,7 +388,7 @@ const loadPokemon = async (side) => {
     const pokName = input.value.trim()
 
     if (!pokName) {
-        showMessage('Enter a Pokemon name or number!')
+        showMessage('Enter a Pokemon name or number!', 'error')
         return
     }
 
@@ -311,7 +423,7 @@ const loadPokemon = async (side) => {
         resetBattle()
         clearSideTimers(side)
         document.getElementById(settings.containerId).innerHTML = ''
-        showMessage('Pokemon not found!')
+        showMessage('Pokemon not found!', 'error')
         setSearchControls(false)
         console.log(err)
     }
@@ -365,7 +477,7 @@ const getMoveDetails = async (url) => {
             type: data.type.name,
             displayType: capitalize(data.type.name),
             power: data.power || 0,
-            accuracy: data.accuracy || 100,
+            accuracy: data.accuracy ?? 100,
             damageClass: data.damage_class ? data.damage_class.name : '',
             pp: data.pp
         }
@@ -396,6 +508,11 @@ const getRandomMoves = (moves, amount) => {
     }
 
     return selectedMoves
+}
+
+const getPlayerTurnMoves = (pokemon) => {
+    const moves = pokemon.moves && pokemon.moves.length ? pokemon.moves : [getFallbackMove()]
+    return shuffleList(moves).slice(0, 4)
 }
 
 const shuffleList = (list) => {
@@ -529,11 +646,13 @@ const selectMachinePokemon = async (playerPokemon) => {
 }
 
 const generateMachineTeam = async (playerTeam) => {
+    const trainerName = getOpponentTrainerName()
+
     battleState.selectingMachine = true
     battleState.machineTeam = []
     updateStartButton()
-    addBattleLog('Você montou seu time!')
-    addBattleLog('A máquina está montando um time equilibrado...')
+    addBattleLog('Você montou seu time!', 'success')
+    addBattleLog(`${trainerName} está montando um time ${getTeamDifficultyProfile().label}...`)
 
     const excludedIds = new Set(playerTeam.filter(Boolean).map((pokemon) => pokemon.id))
 
@@ -561,10 +680,10 @@ const generateMachineTeam = async (playerTeam) => {
 
             excludedIds.add(opponent.id)
             battleState.machineTeam.push(opponent)
-            addBattleLog(`A máquina adicionou ${opponent.name} ao time.`)
+            addBattleLog(`${trainerName} adicionou ${opponent.name} ao time.`)
         }
 
-        addBattleLog('A máquina escolheu seu time!')
+        addBattleLog(`${trainerName} escolheu seu time!`, 'success')
     } finally {
         battleState.selectingMachine = false
         updateStartButton()
@@ -573,8 +692,9 @@ const generateMachineTeam = async (playerTeam) => {
 
 const getBalancedMachinePokemon = async (playerPokemon, excludedIds = new Set()) => {
     const playerPower = calculatePokemonPower(playerPokemon)
+    const profile = getTeamDifficultyProfile()
     const firstCandidates = await getCandidateSample(playerPokemon, 15, excludedIds)
-    let validCandidates = findCandidatesInPowerRange(firstCandidates, playerPower, 0.85, 1.15)
+    let validCandidates = findCandidatesInPowerRange(firstCandidates, playerPower, profile.firstRange[0], profile.firstRange[1])
 
     if (validCandidates.length) {
         return getRandomItem(validCandidates)
@@ -584,13 +704,13 @@ const getBalancedMachinePokemon = async (playerPokemon, excludedIds = new Set())
 
     const secondCandidates = await getCandidateSample(playerPokemon, 15, excludedIds)
     const allCandidates = [...firstCandidates, ...secondCandidates]
-    validCandidates = findCandidatesInPowerRange(allCandidates, playerPower, 0.75, 1.25)
+    validCandidates = findCandidatesInPowerRange(allCandidates, playerPower, profile.secondRange[0], profile.secondRange[1])
 
     if (validCandidates.length) {
         return getRandomItem(validCandidates)
     }
 
-    const closestCandidate = findClosestCandidate(allCandidates, playerPower)
+    const closestCandidate = findClosestCandidate(allCandidates, playerPower * profile.targetMultiplier)
 
     if (!closestCandidate) {
         throw new Error('Machine could not find a candidate')
@@ -659,14 +779,18 @@ const findCandidatesInPowerRange = (candidates, playerPower, minMultiplier, maxM
     })
 }
 
-const findClosestCandidate = (candidates, playerPower) => {
+const getTeamDifficultyProfile = () => {
+    return teamDifficultyProfiles[getAiDifficulty()] || teamDifficultyProfiles.medium
+}
+
+const findClosestCandidate = (candidates, targetPower) => {
     return candidates.reduce((closest, candidate) => {
         if (!closest) {
             return candidate
         }
 
-        const currentDistance = Math.abs(candidate.totalPower - playerPower)
-        const closestDistance = Math.abs(closest.totalPower - playerPower)
+        const currentDistance = Math.abs(candidate.totalPower - targetPower)
+        const closestDistance = Math.abs(closest.totalPower - targetPower)
 
         return currentDistance < closestDistance ? candidate : closest
     }, null)
@@ -685,14 +809,118 @@ const getFallbackMachinePokemon = async (playerPokemon, excludedIds = new Set())
     }
 }
 
-const startThreeVsThreeBattle = async () => {
+const getCurrentTrainer = () => {
+    return journeyState.trainers[journeyState.currentTrainerIndex]
+}
+
+const getOpponentTrainerName = () => {
+    const trainer = getCurrentTrainer()
+    return trainer ? trainer.name : 'A máquina'
+}
+
+const loadTrainerBattle = async (trainerIndex) => {
+    const trainer = journeyState.trainers[trainerIndex]
+
+    if (!trainer) {
+        showMessage('Fim da demonstração da jornada.', 'success')
+        setBattleButton('New Game', false, false)
+        journeyState.phase = 'journeyComplete'
+        return
+    }
+
     if (battleState.selectingMachine) {
-        showMessage('Wait for the machine to choose its team!')
+        showMessage(`${trainer.name} está escolhendo seu time!`, 'info')
         return
     }
 
     if (!isPlayerTeamComplete()) {
-        showMessage('Choose 3 Pokemon before battle!')
+        showMessage('Choose 3 Pokemon before battle!', 'error')
+        return
+    }
+
+    journeyState.phase = 'preparing'
+    journeyState.result = null
+    battleState.resetToken += 1
+    const resetToken = battleState.resetToken
+    resetPokemonTeamForBattle(battleState.playerTeam)
+    battleState.machineTeam = []
+    battleState.player = null
+    battleState.opponent = null
+    battleState.started = false
+    battleState.finished = false
+    battleState.currentTurn = null
+    battleState.machineThinking = false
+    battleState.waitingForPlayerSwitch = false
+    clearSideTimers('player')
+    clearSideTimers('opponent')
+    clearBattleTimers()
+    clearMessage()
+    clearBattleLog()
+    clearMoveButtons()
+    hideMachineMoveBubble()
+    hidePlayerSwitchOptions()
+    updateTeamDots('player')
+    updateTeamDots('opponent')
+    clearBattleScreen({ showIdleBall: false, showWelcome: false })
+    setCurrentTrainerAiDifficulty()
+    setSearchControls(true)
+    setBattleButton('Preparing...', true, false)
+    addBattleLog(`${trainer.name} está escolhendo seu time...`)
+
+    try {
+        await generateMachineTeam(battleState.playerTeam)
+
+        if (resetToken !== battleState.resetToken) {
+            return
+        }
+
+        showTrainerIntro(trainer)
+        setBattleMenuMode('trainerIntro')
+        setBattleButton('Start 3x3 Battle', false, false)
+        journeyState.phase = 'trainerIntro'
+    } catch (err) {
+        console.log(err)
+        battleState.machineTeam = []
+        showMessage(`${trainer.name} could not build a team. Try again!`, 'error')
+        setBattleButton('START 3x3', false, false)
+        journeyState.phase = 'setup'
+    } finally {
+        setSearchControls(false)
+    }
+}
+
+const startTrainerBattle = () => {
+    hideTrainerIntro()
+    journeyState.phase = 'battle'
+    startThreeVsThreeBattle()
+}
+
+const resetPokemonTeamForBattle = (team) => {
+    team.forEach((pokemon) => {
+        if (!pokemon) {
+            return
+        }
+
+        pokemon.currentHp = pokemon.maxHp
+        pokemon.defeated = false
+        pokemon.ready = true
+    })
+}
+
+const setCurrentTrainerAiDifficulty = () => {
+    const trainer = getCurrentTrainer()
+
+    setAiDifficulty(trainer ? trainer.difficulty : 'medium', true)
+}
+
+const startThreeVsThreeBattle = async () => {
+    if (battleState.selectingMachine) {
+        showMessage(`Wait for ${getOpponentTrainerName()} to choose its team!`, 'info')
+        return
+    }
+
+    if (!isPlayerTeamComplete()) {
+        showMessage('Choose 3 Pokemon before battle!', 'error')
         return
     }
 
@@ -713,7 +941,7 @@ const startThreeVsThreeBattle = async () => {
         } catch (err) {
             console.log(err)
             battleState.machineTeam = []
-            showMessage('The machine could not build its team. Try again!')
+            showMessage(`${getOpponentTrainerName()} could not build a team. Try again!`, 'error')
             setBattleButton('START 3x3', false, false)
             return
         } finally {
@@ -725,18 +953,18 @@ const startThreeVsThreeBattle = async () => {
     const pokemon2 = battleState.machineTeam[0]
 
     if (battleState.selectingMachine) {
-        showMessage('Wait for the machine to choose a Pokemon!')
+        showMessage(`Wait for ${getOpponentTrainerName()} to choose a Pokemon!`, 'info')
         return
     }
 
     if (battleState.machineTeam.length !== 3) {
-        showMessage('The machine could not build its team. Try again!')
+        showMessage(`${getOpponentTrainerName()} could not build a team. Try again!`, 'error')
         setBattleButton('START 3x3', false, false)
         return
     }
 
     if (!pokemon1 || !pokemon2 || !pokemon1.ready || !pokemon2.ready) {
-        showMessage('Choose 3 Pokemon before battle!')
+        showMessage('Choose 3 Pokemon before battle!', 'error')
         return
     }
 
@@ -760,7 +988,7 @@ const startThreeVsThreeBattle = async () => {
     }
 
     updateHpBar('opponent')
-    addBattleLog(`A máquina enviou ${pokemon2.name}!`)
+    addBattleLog(`${getOpponentTrainerName()} enviou ${pokemon2.name}!`)
 
     renderPokemon(pokemon1, 'player')
     await wait(1900)
@@ -775,7 +1003,7 @@ const startThreeVsThreeBattle = async () => {
     updateTeamDots('player')
     updateTeamDots('opponent')
 
-    addBattleLog('A batalha começou!')
+    addBattleLog('A batalha começou!', 'success')
     addBattleLog(getFirstTurnMessage())
     handleTurnChange()
 }
@@ -790,10 +1018,14 @@ const executeMove = (move) => {
     const attacker = battleState[attackerSide]
     const defender = battleState[defenderSide]
 
-    addBattleLog(`${attacker.name} usou ${move.displayName}!`)
+    addBattleLog(`${attacker.name} usou ${move.displayName}!`, 'action')
 
     if (!checkMoveAccuracy(move)) {
-        addBattleLog('O golpe errou!')
+        if (attackerSide === 'player') {
+            playSound('failAttack')
+        }
+
+        addBattleLog('O golpe errou!', 'error')
         battleState.currentTurn = defenderSide
         handleTurnChange()
         return
@@ -801,20 +1033,21 @@ const executeMove = (move) => {
 
     const damageData = calculateMoveDamage(attacker, defender, move)
     const damage = damageData.damage
+    const previousHp = defender.currentHp
 
     defender.currentHp = Math.max(defender.currentHp - damage, 0)
-    updateHpBar(defenderSide)
+    updateHpBar(defenderSide, previousHp)
 
     if (damageData.typeMultiplier > 1) {
-        addBattleLog('Foi super efetivo!')
+        addBattleLog('Foi super efetivo!', 'success')
     } else if (damageData.typeMultiplier < 1) {
-        addBattleLog('Foi pouco efetivo!')
+        addBattleLog('Foi pouco efetivo!', 'info')
     }
 
-    addBattleLog(`${defender.name} perdeu ${damage} HP.`)
+    addBattleLog(`${defender.name} perdeu ${damage} HP.`, 'action')
 
     if (defender.currentHp === 0) {
-        addBattleLog(`${defender.name} foi derrotado!`)
+        addBattleLog(`${defender.name} foi derrotado!`, 'action')
         handlePokemonDefeated(defenderSide)
         return
     }
@@ -823,8 +1056,25 @@ const executeMove = (move) => {
     handleTurnChange()
 }
 
+const instantDefeatOpponent = () => {
+    if (!battleState.started || battleState.finished || !battleState.opponent) {
+        addBattleLog('TEST KO só funciona durante a batalha.', 'error')
+        return
+    }
+
+    hideMachineMoveBubble()
+    clearMoveButtons()
+    battleState.machineThinking = false
+    const previousHp = battleState.opponent.currentHp
+    battleState.opponent.currentHp = 0
+    updateHpBar('opponent', previousHp)
+    addBattleLog(`TEST KO: golpe super efetivo em ${battleState.opponent.name}!`, 'success')
+    addBattleLog(`${battleState.opponent.name} foi derrotado!`, 'action')
+    handlePokemonDefeated('opponent')
+}
+
 const checkMoveAccuracy = (move) => {
-    const accuracy = move.accuracy || 100
+    const accuracy = move.accuracy ?? 100
 
     if (accuracy >= 100) {
         return true
@@ -885,7 +1135,7 @@ const renderMoveButtons = () => {
 
     hideMachineMoveBubble()
 
-    const turnMoves = getRandomMoves(currentPokemon.moves, 4)
+    const turnMoves = getPlayerTurnMoves(currentPokemon)
 
     moveButtons.innerHTML = turnMoves.map((move, index) => `
         <button class="moveButton" data-move-index="${index}">
@@ -937,7 +1187,7 @@ const executeMachineTurn = () => {
     }
 
     battleState.machineThinking = true
-    addBattleLog('A máquina está pensando...')
+    addBattleLog(`${getOpponentTrainerName()} está pensando...`)
 
     const delay = Math.floor(Math.random() * 401) + 800
 
@@ -949,7 +1199,7 @@ const executeMachineTurn = () => {
         }
 
         const machinePokemon = battleState.opponent
-        const move = chooseRandomMachineMove(machinePokemon)
+        const move = chooseMachineMove(machinePokemon, battleState.player)
 
         showMachineMoveBubble(machinePokemon, move)
 
@@ -965,8 +1215,89 @@ const executeMachineTurn = () => {
     battleTimers.push(thinkingTimer)
 }
 
-const chooseRandomMachineMove = (machinePokemon) => {
-    return getRandomItem(getRandomMoves(machinePokemon.moves, 4))
+const setAiDifficulty = (difficulty, fromTrainer = false) => {
+    if (journeyState.isJourneyMode && !fromTrainer) {
+        addBattleLog('Na jornada, a dificuldade é definida pelo treinador atual.')
+        updateAiDifficultyButtons()
+        return
+    }
+
+    if (!aiDifficultyLabels[difficulty]) {
+        difficulty = 'medium'
+    }
+
+    battleState.aiDifficulty = difficulty
+    updateAiDifficultyButtons()
+    addBattleLog(`Dificuldade da IA: ${aiDifficultyLabels[difficulty]}`)
+}
+
+const getAiDifficulty = () => {
+    return battleState.aiDifficulty || 'medium'
+}
+
+const updateAiDifficultyButtons = () => {
+    const difficulty = getAiDifficulty()
+    const buttons = document.querySelectorAll('.aiDifficultyButton')
+
+    buttons.forEach((button) => {
+        button.classList.toggle('active', button.dataset.aiDifficulty === difficulty)
+    })
+}
+
+const chooseMachineMove = (machinePokemon, playerPokemon) => {
+    const difficulty = getAiDifficulty()
+
+    if (difficulty === 'easy') {
+        console.log('easy: random move')
+        return chooseRandomMove(machinePokemon)
+    }
+
+    if (difficulty === 'hard') {
+        console.log('hard: best expected damage')
+        return chooseBestExpectedDamageMove(machinePokemon, playerPokemon)
+    }
+
+    if (Math.random() < 0.7) {
+        console.log('medium: best move')
+        return chooseBestExpectedDamageMove(machinePokemon, playerPokemon)
+    }
+
+    console.log('medium: random move')
+    return chooseRandomMove(machinePokemon)
+}
+
+const chooseRandomMove = (pokemon) => {
+    const moves = pokemon.moves && pokemon.moves.length ? pokemon.moves : [getFallbackMove()]
+    return getRandomItem(moves) || getFallbackMove()
+}
+
+const chooseBestExpectedDamageMove = (attacker, defender) => {
+    const moves = getAvailableDamageMoves(attacker)
+
+    return moves.reduce((bestMove, move) => {
+        const currentDamage = calculateExpectedDamage(attacker, defender, move)
+        const bestDamage = calculateExpectedDamage(attacker, defender, bestMove)
+
+        return currentDamage > bestDamage ? move : bestMove
+    }, moves[0])
+}
+
+const calculateExpectedDamage = (attacker, defender, move) => {
+    if (!move.power) {
+        return 0
+    }
+
+    const accuracy = move.accuracy ?? 100
+    const damageData = calculateMoveDamage(attacker, defender, move)
+
+    return damageData.damage * (accuracy / 100)
+}
+
+const getAvailableDamageMoves = (pokemon) => {
+    const moves = pokemon.moves && pokemon.moves.length ? pokemon.moves : []
+    const damageMoves = moves.filter((move) => move.power > 0)
+
+    return damageMoves.length ? damageMoves : [getFallbackMove()]
 }
 
 const showMachineMoveBubble = (pokemon, move) => {
@@ -991,7 +1322,7 @@ const hideMachineMoveBubble = () => {
     bubble.textContent = ''
 }
 
-const updateHpBar = (side) => {
+const updateHpBar = (side, fromHp = null) => {
     const pokemon = battleState[side]
     const settings = pokemonSides[side]
     const pokemonElement = document.getElementById(settings.pokemonId)
@@ -1002,10 +1333,35 @@ const updateHpBar = (side) => {
         return
     }
 
-    const hpPercent = Math.max((pokemon.currentHp / pokemon.maxHp) * 100, 0)
+    const startHp = fromHp === null ? pokemon.currentHp : fromHp
+    const endHp = pokemon.currentHp
 
-    lifeBar.style.width = `${hpPercent}%`
-    hpText.textContent = `HP: ${pokemon.currentHp}/${pokemon.maxHp}`
+    animateHpBar(pokemon, lifeBar, hpText, startHp, endHp)
+}
+
+const animateHpBar = (pokemon, lifeBar, hpText, startHp, endHp) => {
+    const difference = Math.abs(startHp - endHp)
+    const steps = Math.max(Math.min(difference, 24), 1)
+    let currentStep = 0
+
+    const renderHpStep = () => {
+        const progress = currentStep / steps
+        const currentHp = Math.round(startHp + (endHp - startHp) * progress)
+        const hpPercent = Math.max((currentHp / pokemon.maxHp) * 100, 0)
+
+        lifeBar.style.width = `${hpPercent}%`
+        hpText.textContent = `HP: ${currentHp}/${pokemon.maxHp}`
+
+        if (currentStep >= steps) {
+            return
+        }
+
+        currentStep += 1
+        const timer = setTimeout(renderHpStep, 30)
+        battleTimers.push(timer)
+    }
+
+    renderHpStep()
 }
 
 const updateTurnIndicator = () => {
@@ -1018,28 +1374,47 @@ const updateTurnIndicator = () => {
     })
 }
 
-const addBattleLog = (message) => {
+const addBattleLog = (message, type = 'default') => {
     const battleLog = document.getElementById('battleLog')
 
     if (!battleLog) {
         return
     }
 
-    battleLog.innerHTML += `<p>${message}</p>`
+    battleLog.innerHTML += `<p class="battleLogMessage ${getBattleLogClass(type)}">${message}</p>`
     battleLog.scrollTop = battleLog.scrollHeight
+}
+
+const getBattleLogClass = (type) => {
+    const classes = {
+        error: 'battleLogError',
+        action: 'battleLogError',
+        success: 'battleLogSuccess',
+        info: 'battleLogInfo',
+        default: 'battleLogInfo'
+    }
+
+    return classes[type] || classes.default
 }
 
 const handlePokemonDefeated = async (defeatedSide) => {
     const defeatedPokemon = battleState[defeatedSide]
 
     defeatedPokemon.defeated = true
+
+    playSound('deathPok')
+
+    if (defeatedSide === 'player') {
+        playSound('cry')
+    }
+
     updateTeamDots(defeatedSide)
     clearMoveButtons()
     hideMachineMoveBubble()
 
     if (defeatedSide === 'opponent') {
         if (!hasAlivePokemon(battleState.machineTeam)) {
-            addBattleLog('Todos os Pokémon da máquina foram derrotados!')
+            addBattleLog(`Todos os Pokémon de ${getOpponentTrainerName()} foram derrotados!`, 'success')
             finishThreeVsThreeBattle('player')
             return
         }
@@ -1053,7 +1428,7 @@ const handlePokemonDefeated = async (defeatedSide) => {
     }
 
     if (!hasAlivePokemon(battleState.playerTeam)) {
-        addBattleLog('Todos os seus Pokémon foram derrotados!')
+        addBattleLog('Todos os seus Pokémon foram derrotados!', 'error')
         finishThreeVsThreeBattle('opponent')
         return
     }
@@ -1063,7 +1438,7 @@ const handlePokemonDefeated = async (defeatedSide) => {
     }
 
     battleState.waitingForPlayerSwitch = true
-    addBattleLog('Escolha seu próximo Pokémon.')
+    addBattleLog('Escolha seu próximo Pokémon.', 'info')
     showPlayerSwitchOptions()
 }
 
@@ -1117,6 +1492,7 @@ const switchPlayerPokemon = async (index) => {
     battleState.player = pokemon
     battleState.waitingForPlayerSwitch = false
     hidePlayerSwitchOptions()
+    playSound('pokeballOpen')
     renderPokemon(pokemon, 'player')
     await wait(1900)
     updateHpBar('player')
@@ -1136,10 +1512,11 @@ const switchMachinePokemon = async () => {
 
     battleState.machineActiveIndex = nextIndex
     battleState.opponent = pokemon
+    playSound('pokeballOpen')
     renderPokemon(pokemon, 'opponent')
     await wait(1900)
     updateHpBar('opponent')
-    addBattleLog(`A máquina enviou ${pokemon.name}!`)
+    addBattleLog(`${getOpponentTrainerName()} enviou ${pokemon.name}!`)
     resetTurnAfterSwitch()
 }
 
@@ -1222,8 +1599,9 @@ const updateTeamDots = (side) => {
 
 const finishThreeVsThreeBattle = (winner) => {
     const winnerSide = winner === 'player' ? 'player' : 'opponent'
+    const trainerName = getOpponentTrainerName()
 
-    addBattleLog(winner === 'player' ? 'Você venceu a batalha 3x3!' : 'A máquina venceu a batalha 3x3!')
+    addBattleLog(winner === 'player' ? `Você venceu ${trainerName}!` : `${trainerName} venceu a batalha!`, winner === 'player' ? 'success' : 'error')
     finishBattle(winnerSide)
 }
 
@@ -1235,21 +1613,133 @@ const finishBattle = (winnerSide) => {
     battleState.machineThinking = false
     battleState.currentTurn = null
     updateTurnIndicator()
-    addBattleLog(`${winner.name} venceu a batalha!`)
+    addBattleLog(`${winner.name} venceu a batalha!`, winnerSide === 'player' ? 'success' : 'error')
+    const isFinalJourneyVictory = isLastJourneyTrainerBattle(winnerSide)
 
     if (winnerSide === 'opponent') {
         playSound('lose')
-    } else {
+    } else if (!isFinalJourneyVictory) {
         playSound('win')
     }
 
-    animateDefeat(loserSide, winnerSide === 'player' ? 'You won' : 'You lose')
-    showFinalTrainerResult(winnerSide)
+    if (!isFinalJourneyVictory) {
+        animateDefeat(loserSide, winnerSide === 'player' ? 'You won' : 'You lose')
+        showFinalTrainerResult(winnerSide)
+    }
+
     hideMachineMoveBubble()
     clearMoveButtons()
     hidePlayerSwitchOptions()
     setBattleButton('NEW BATTLE', false, false)
     setBattleMenuMode('finished')
+    handleJourneyBattleResult(winnerSide)
+}
+
+const isLastJourneyTrainerBattle = (winnerSide) => {
+    return journeyState.isJourneyMode
+        && winnerSide === 'player'
+        && journeyState.currentTrainerIndex >= journeyState.trainers.length - 1
+}
+
+const handleJourneyBattleResult = (winnerSide) => {
+    if (!journeyState.isJourneyMode) {
+        return
+    }
+
+    if (winnerSide === 'player') {
+        handleJourneyVictory()
+        return
+    }
+
+    handleJourneyDefeat()
+}
+
+const handleJourneyVictory = () => {
+    const trainer = getCurrentTrainer()
+
+    journeyState.phase = 'result'
+    journeyState.result = 'victory'
+
+    if (trainer && !journeyState.completedTrainers.includes(trainer.index)) {
+        journeyState.completedTrainers.push(trainer.index)
+    }
+
+    if (trainer) {
+        addBattleLog(`${trainer.name}: ${trainer.defeatText}`, 'success')
+    }
+
+    if (journeyState.currentTrainerIndex >= journeyState.trainers.length - 1) {
+        completeJourney()
+        return
+    }
+
+    setBattleButton('Next Battle', false, false)
+}
+
+const completeJourney = () => {
+    journeyState.phase = 'journeyComplete'
+    journeyState.result = 'victory'
+    stopAllSounds()
+    showChampionCelebration()
+    playSound('finishGame')
+    addBattleLog('Congratulations! You conquered the great Pokemon challenge!', 'success')
+    setBattleButton('New Game', false, false)
+}
+
+const handleJourneyDefeat = () => {
+    const trainer = getCurrentTrainer()
+
+    journeyState.phase = 'result'
+    journeyState.result = 'defeat'
+
+    if (trainer) {
+        addBattleLog(`Você perdeu para ${trainer.name}.`, 'error')
+    }
+
+    setBattleButton(journeyState.continueUsed ? 'New Game' : 'Continue', false, false)
+}
+
+const handleJourneyButtonAction = () => {
+    if (journeyState.result === 'victory') {
+        if (journeyState.currentTrainerIndex >= journeyState.trainers.length - 1) {
+            restartJourney()
+            return
+        }
+
+        goToNextTrainer()
+        return
+    }
+
+    if (journeyState.result === 'defeat') {
+        if (!journeyState.continueUsed) {
+            journeyState.continueUsed = true
+            retryCurrentTrainer()
+            return
+        }
+
+        restartJourney()
+        return
+    }
+
+    restartJourney()
+}
+
+const goToNextTrainer = () => {
+    journeyState.currentTrainerIndex += 1
+    loadTrainerBattle(journeyState.currentTrainerIndex)
+}
+
+const retryCurrentTrainer = () => {
+    resetBattleForJourneySetup()
+    showMessage(`Continue: enfrente ${getOpponentTrainerName()} novamente.`, 'info')
+}
+
+const restartJourney = () => {
+    journeyState.currentTrainerIndex = 0
+    journeyState.completedTrainers = []
+    journeyState.continueUsed = false
+    resetBattleForJourneySetup()
+    showMessage('New Game: a jornada voltou para Mariner.', 'info')
 }
 
 const animateDefeat = (loserSide, resultMessage) => {
@@ -1284,6 +1774,7 @@ const animateDefeat = (loserSide, resultMessage) => {
 const showFinalTrainerResult = (winnerSide) => {
     const settings = pokemonSides[winnerSide]
     const container = document.getElementById(settings.containerId)
+    const trainer = getCurrentTrainer()
 
     if (!container) {
         return
@@ -1291,19 +1782,125 @@ const showFinalTrainerResult = (winnerSide) => {
 
     const trainerImage = winnerSide === 'player'
         ? '../../assets/img/ash_win.png'
-        : '../../assets/img/trainer_gale.png'
-    const trainerAlt = winnerSide === 'player' ? 'Ash won' : 'Trainer Gale won'
+        : (trainer && trainer.image ? trainer.image : '')
+    const trainerAlt = winnerSide === 'player' ? 'Ash won' : `${getOpponentTrainerName()} won`
     const resultClass = winnerSide === 'player' ? 'playerResult' : 'machineResult'
+    const journeyProgress = winnerSide === 'player' ? getJourneyProgressMarkup() : ''
 
     const resultTimer = setTimeout(() => {
+        if (winnerSide === 'player') {
+            showJourneyVictoryProgress(trainerImage, trainerAlt, journeyProgress)
+            return
+        }
+
         container.innerHTML = `
             <div class="battleResultTrainer ${resultClass}">
-                <img src="${trainerImage}" alt="${trainerAlt}">
+                ${trainerImage ? `<img src="${trainerImage}" alt="${trainerAlt}">` : `<span>${getOpponentTrainerName()} won</span>`}
             </div>
         `
     }, 2000)
 
     battleTimers.push(resultTimer)
+}
+
+const showJourneyVictoryProgress = (trainerImage, trainerAlt, journeyProgress) => {
+    battleState.started = false
+    updateTeamDots('player')
+    updateTeamDots('opponent')
+
+    const playerContainer = document.getElementById(pokemonSides.player.containerId)
+    const opponentContainer = document.getElementById(pokemonSides.opponent.containerId)
+    const textScreen = document.getElementById('textScreen')
+    const ball = document.getElementById('ball')
+
+    if (playerContainer) {
+        playerContainer.innerHTML = ''
+    }
+
+    if (opponentContainer) {
+        opponentContainer.innerHTML = ''
+    }
+
+    if (ball) {
+        ball.style.display = 'none'
+    }
+
+    if (textScreen) {
+        textScreen.innerHTML = `
+            <div class="journeyVictoryScreen">
+                <img class="ashWinResult" src="${trainerImage}" alt="${trainerAlt}">
+                <p class="journeyVictoryText">You won!</p>
+                <div class="journeyProgressPanel">
+                    ${journeyProgress}
+                </div>
+            </div>
+        `
+        textScreen.style.display = 'block'
+
+        const xSoundTimer = setTimeout(() => {
+            playSound('xEnter')
+        }, 1000)
+
+        battleTimers.push(xSoundTimer)
+    }
+}
+
+const getJourneyProgressMarkup = () => {
+    const defeatedIndexes = new Set([...journeyState.completedTrainers])
+    const trainer = getCurrentTrainer()
+
+    if (trainer) {
+        defeatedIndexes.add(trainer.index)
+    }
+
+    return `
+        <div class="journeyFaceRow">
+            ${journeyState.trainers.map((trainer) => {
+                const defeatedClass = defeatedIndexes.has(trainer.index) ? ' defeated' : ''
+
+                return `
+                    <div class="journeyFace${defeatedClass}" title="${trainer.name}">
+                        <img src="${trainer.face}" alt="${trainer.name}">
+                    </div>
+                `
+            }).join('')}
+        </div>
+    `
+}
+
+const showChampionCelebration = () => {
+    battleState.started = false
+    clearMoveButtons()
+    hideMachineMoveBubble()
+    hidePlayerSwitchOptions()
+    updateTeamDots('player')
+    updateTeamDots('opponent')
+
+    const playerContainer = document.getElementById(pokemonSides.player.containerId)
+    const opponentContainer = document.getElementById(pokemonSides.opponent.containerId)
+    const textScreen = document.getElementById('textScreen')
+    const ball = document.getElementById('ball')
+
+    if (playerContainer) {
+        playerContainer.innerHTML = ''
+    }
+
+    if (opponentContainer) {
+        opponentContainer.innerHTML = ''
+    }
+
+    if (ball) {
+        ball.style.display = 'none'
+    }
+
+    if (textScreen) {
+        textScreen.innerHTML = `
+            <p class="championTitle">Congratulations, Champion!</p>
+            <p class="championSubtitle">You defeated all 6 trainers and completed the journey.</p>
+            <img src="../../assets/img/ash-champion.png" class="screenText championAsh" alt="Ash champion">
+        `
+        textScreen.style.display = 'block'
+    }
 }
 
 const chooseFirstTurn = (pokemon1, pokemon2) => {
@@ -1348,6 +1945,13 @@ const resetBattle = () => {
 }
 
 const resetFullBattle = () => {
+    journeyState.currentTrainerIndex = 0
+    journeyState.completedTrainers = []
+    journeyState.continueUsed = false
+    resetBattleForJourneySetup()
+}
+
+const resetBattleForJourneySetup = () => {
     battleState.resetToken += 1
     battleState.player = null
     battleState.opponent = null
@@ -1361,6 +1965,8 @@ const resetFullBattle = () => {
     battleState.selectingMachine = false
     battleState.machineThinking = false
     battleState.waitingForPlayerSwitch = false
+    journeyState.phase = 'setup'
+    journeyState.result = null
 
     clearSideTimers('player')
     clearSideTimers('opponent')
@@ -1368,6 +1974,7 @@ const resetFullBattle = () => {
     clearBattleLog()
     clearMoveButtons()
     hideMachineMoveBubble()
+    hideTrainerIntro()
     clearMessage()
     hidePlayerSwitchOptions()
     clearBattleScreen()
@@ -1376,6 +1983,9 @@ const resetFullBattle = () => {
     updateTeamDots('player')
     updateTeamDots('opponent')
     updateTurnIndicator()
+    const trainer = getCurrentTrainer()
+    battleState.aiDifficulty = trainer ? trainer.difficulty : 'medium'
+    updateAiDifficultyButtons()
     setSearchControls(false)
     setBattleMenuMode('setup')
     setBattleButton('START 3x3', true, false)
@@ -1399,6 +2009,92 @@ const setBattleButton = (text, disabled, hidden) => {
     }
 }
 
+const showTrainerIntro = (trainer) => {
+    playSound('songBattle')
+    updateScreenTrainerIntro(true, trainer)
+}
+
+const hideTrainerIntro = () => {
+    const textScreen = document.getElementById('textScreen')
+
+    if (textScreen) {
+        textScreen.style.display = 'none'
+    }
+}
+
+const showJourneyWelcome = () => {
+    const textScreen = document.getElementById('textScreen')
+
+    if (!textScreen) {
+        return
+    }
+
+    textScreen.innerHTML = `
+        <p class="galeIntroText">Welcome to the great Pokemon challenge. Good luck!</p>
+        <img src="../../assets/img/enter_ash.png" class="screenText trainerGale" alt="Ash entering the Pokemon challenge">
+    `
+    textScreen.style.display = 'block'
+}
+
+const updateScreenTrainerIntro = (showChallenge = false, selectedTrainer = getCurrentTrainer()) => {
+    const trainer = selectedTrainer
+    const textScreen = document.getElementById('textScreen')
+
+    if (!textScreen) {
+        return
+    }
+
+    if (!trainer) {
+        textScreen.innerHTML = '<p class="galeIntroText">Journey complete!</p>'
+        return
+    }
+
+    const challengeMarkup = showChallenge
+        ? `
+            <p class="trainerAiText ${trainer.difficulty}">${capitalize(trainer.difficulty)} AI</p>
+            <p class="trainerChallengeText"></p>
+        `
+        : ''
+
+    textScreen.innerHTML = `
+        <p class="galeIntroText">${trainer.name} is challenging you!</p>
+        ${challengeMarkup}
+        <img src="${trainer.image}" class="screenText trainerGale${showChallenge ? ' trainerChallengeImage' : ''}" alt="Trainer ${trainer.name}">
+    `
+    textScreen.style.display = 'block'
+
+    if (showChallenge) {
+        typeTrainerChallenge(trainer.challengeText)
+    }
+}
+
+const typeTrainerChallenge = (text) => {
+    const challenge = document.querySelector('.trainerChallengeText')
+
+    if (!challenge) {
+        return
+    }
+
+    const message = `"${text}"`
+    let currentIndex = 0
+
+    challenge.textContent = ''
+
+    const typeNextLetter = () => {
+        currentIndex += 1
+        challenge.textContent = message.slice(0, currentIndex)
+
+        if (currentIndex >= message.length) {
+            return
+        }
+
+        const timer = setTimeout(typeNextLetter, 42)
+        battleTimers.push(timer)
+    }
+
+    typeNextLetter()
+}
+
 const setBattleMenuMode = (mode) => {
     const menuTitle = document.querySelector('.txtMenu')
     const slots = document.getElementById('playerTeamSlots')
@@ -1406,6 +2102,10 @@ const setBattleMenuMode = (mode) => {
     const teamSummary = document.getElementById('teamSummary')
     const battlePanel = document.querySelector('.battlePanel')
     const isSetup = mode === 'setup'
+
+    if (mode === 'setup') {
+        showJourneyWelcome()
+    }
 
     if (menuTitle) {
         menuTitle.style.display = isSetup ? 'block' : 'none'
@@ -1470,7 +2170,7 @@ const setRandomTeamButton = (disabled) => {
     }
 }
 
-const clearBattleScreen = () => {
+const clearBattleScreen = ({ showIdleBall = true, showWelcome = true } = {}) => {
     const playerContainer = document.getElementById(pokemonSides.player.containerId)
     const opponentContainer = document.getElementById(pokemonSides.opponent.containerId)
     const textScreen = document.getElementById('textScreen')
@@ -1487,15 +2187,19 @@ const clearBattleScreen = () => {
     }
 
     if (textScreen) {
-        textScreen.style.display = 'block'
+        textScreen.style.display = showWelcome ? 'block' : 'none'
     }
 
     if (ball) {
-        ball.style.display = 'inline-block'
+        ball.style.display = showIdleBall ? 'inline-block' : 'none'
     }
 
     if (power) {
         power.style.color = 'rgb(165, 165, 165)'
+    }
+
+    if (showWelcome) {
+        showJourneyWelcome()
     }
 
     inputs.forEach((input) => {
@@ -1522,12 +2226,8 @@ const clearMessage = () => {
     document.getElementById('winner').innerHTML = ''
 }
 
-const showMessage = (message) => {
-    document.getElementById('winner').innerHTML = `
-        <marquee direction="right" behavior="alternate" class="winnerMensage">
-            ${message}
-        </marquee>
-    `
+const showMessage = (message, type = 'info') => {
+    addBattleLog(message, type)
 }
 
 const getBallImage = (image) => {
@@ -1542,6 +2242,10 @@ const formatMoveName = (value) => {
 }
 
 const playSound = (soundName) => {
+    if (battleState.muted) {
+        return
+    }
+
     const sound = sounds[soundName]
 
     if (!sound) {
@@ -1557,6 +2261,34 @@ const playSound = (soundName) => {
     }
 }
 
+const toggleMute = () => {
+    battleState.muted = !battleState.muted
+
+    if (battleState.muted) {
+        stopAllSounds()
+    }
+
+    updateMuteButton()
+}
+
+const stopAllSounds = () => {
+    Object.values(sounds).forEach((sound) => {
+        sound.pause()
+        sound.currentTime = 0
+    })
+}
+
+const updateMuteButton = () => {
+    const button = document.getElementById('muteButton')
+
+    if (!button) {
+        return
+    }
+
+    button.classList.toggle('muted', battleState.muted)
+    button.setAttribute('aria-pressed', battleState.muted ? 'true' : 'false')
+}
+
 const wait = (time) => {
     return new Promise((resolve) => setTimeout(resolve, time))
 }
@@ -1566,9 +2298,14 @@ const capitalize = (value) => {
 }
 
 window.addEventListener('load', () => {
+    const trainer = getCurrentTrainer()
+    battleState.aiDifficulty = trainer ? trainer.difficulty : 'medium'
     renderPlayerTeamSlots()
     renderTeamSummary()
     setBattleMenuMode('setup')
+    showJourneyWelcome()
+    updateAiDifficultyButtons()
+    updateMuteButton()
     updateStartButton()
     playSound('start')
 })
