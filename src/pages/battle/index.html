@@ -51,11 +51,15 @@
         
         <div class="screen">
             <button class="power" id="powerId" type="button" onclick="resetFullBattle()">◉ Power / Reset</button>
+            <button class="muteButton" id="muteButton" type="button" onclick="toggleMute()" aria-pressed="false">
+                <span>🎵</span>
+                <span class="muteToggle" aria-hidden="true"></span>
+            </button>
             <div id="machineTeamDots" class="teamDots teamDotsMachine"></div>
             <div id="halfScreen"></div>
             <div id="textScreen" class="introGale">
-                <p class="galeIntroText">Gale is challenging you!</p>
-                <img src="../../assets/img/trainer_gale.png" class="screenText trainerGale" alt="Trainer Gale">
+                <p class="galeIntroText">Welcome to the great Pokemon challenge. Good luck!</p>
+                <img src="../../assets/img/enter_ash.png" class="screenText trainerGale" alt="Ash entering the Pokemon challenge">
             </div>
             <marquee behavior="alternate" direction="down" class="marqueeBall" id="ball"><img src="../../assets/img/pokeballPixel.png" class="ballImg" id="ball"><br>↓</marquee>
             <div id="halfScreen2"></div> 
@@ -78,6 +82,9 @@
             <div id="playerTeamSlots" class="teamSlots"></div>
             <div id="teamSummary" class="teamSummary"></div>
             <button class="randomTeamButton" onclick="chooseRandomPlayerTeam()">Random fast team</button>
+            <div class="aiDifficultyControls" aria-label="AI difficulty">
+                <button class="instantKoButton" type="button" onclick="instantDefeatOpponent()">TEST KO</button>
+            </div>
 
             <div>
                 <button class="toBattle" onclick="fight()" disabled>START 3x3</button>
