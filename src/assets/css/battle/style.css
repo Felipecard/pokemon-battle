@@ -6,7 +6,7 @@ body {
 
 .cor-navbar {
     background-color: rgb(255, 255, 255);
-    
+    box-shadow: 0 5px 0 rgba(25, 130, 196, 0.18);
 }
 
 .navbarText {
@@ -15,9 +15,44 @@ body {
     margin-right: 50px;
 }
 
+.navbar-brand.navbarText {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.navbar-nav {
+    align-items: center;
+    gap: 10px;
+}
+
+.navbar .nav-link.navbarText {
+    margin-right: 0;
+}
+
 .navbarBorder {
-    border-style: solid;
-    border-radius: 5px; 
+    min-width: 112px;
+    padding: 10px 14px;
+    text-align: center;
+    color: #1982c4;
+    background-color: #eef8ff;
+    border: 3px solid #1982c4;
+    border-radius: 5px;
+    box-shadow: 0 4px 0 #12669a;
+    transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease, color 160ms ease;
+}
+
+.navbarBorder:hover,
+.navbarBorder.active {
+    color: white;
+    background-color: #f25f5c;
+    border-color: #f25f5c;
+    box-shadow: 0 4px 0 #b83d3a;
+}
+
+.navbarBorder:active {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 #b83d3a;
 }
 
 .bulbasaur {
@@ -53,6 +88,115 @@ body {
     font-size: 15px;
 }
 
+.machineChoice {
+    display: none;
+}
+
+.teamSlots {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 7px;
+    margin-top: 12px;
+}
+
+.teamSlot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 34px;
+    padding: 6px 8px;
+    color: black;
+    background-color: rgb(240, 240, 240);
+    border: 3px solid #f25f5c;
+    border-radius: 5px;
+    line-height: 13px;
+}
+
+.teamSlotEmpty {
+    gap: 8px;
+}
+
+.teamSlotForm {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex: 1;
+    gap: 6px;
+}
+
+.teamSlotInput {
+    width: 190px;
+    min-width: 0;
+    height: 25px;
+    border: 2px solid white;
+    border-radius: 5px;
+    font-family: 'Press Start 2P';
+    font-size: 9px;
+}
+
+.teamSlot button {
+    min-width: 34px;
+    height: 24px;
+    border: 0;
+    color: white;
+    background-color: #f25f5c;
+    font-family: 'Press Start 2P';
+    font-size: 8px;
+    cursor: pointer;
+}
+
+.teamSlotAdd {
+    padding: 0 6px;
+}
+
+.teamSlot button:disabled,
+.teamSlotInput:disabled {
+    cursor: default;
+    opacity: 0.7;
+}
+
+.randomTeamButton {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 0;
+    border: 0;
+    color: rgb(250, 250, 121);
+    background: transparent;
+    cursor: pointer;
+    font-family: 'Press Start 2P';
+    font-size: 9px;
+    text-decoration: underline;
+}
+
+.randomTeamButton:disabled {
+    cursor: default;
+    opacity: 0.55;
+}
+
+.teamSummary {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    margin-top: 4px;
+    color: black;
+}
+
+.teamSummarySprites {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+.teamSummaryPokemon {
+    width: 54px;
+    height: 54px;
+    object-fit: contain;
+    image-rendering: pixelated;
+    background-color: #9fd8ff;
+    border: 0;
+    border-radius: 5px;
+}
 
 .toBattle {  
     text-align: center;
@@ -84,11 +228,8 @@ body {
     margin-top: 18px;
 }
 
-.turnInfo {
-    min-height: 18px;
-    margin-bottom: 10px;
-    color: rgb(250, 250, 121);
-    font-size: 10px;
+.battlePanelActive {
+    margin-top: 10px;
 }
 
 .battleLog {
@@ -103,8 +244,127 @@ body {
     line-height: 14px;
 }
 
+.battlePanelActive .battleLog {
+    height: 165px;
+}
+
 .battleLog p {
     margin: 0 0 8px 0;
+}
+
+.moveButtons {
+    position: absolute;
+    left: -88px;
+    bottom: 100px;
+    width: 161px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 6px;
+    padding: 8px;
+    background-color: white;
+    border: 4px solid #f25f5c;
+    border-radius: 5px;
+    box-shadow: 0 8px 0 rgba(0, 0, 0, 0.12);
+    z-index: 3;
+}
+
+.moveButtons:empty {
+    display: none;
+}
+
+.moveButtons::before {
+    content: "";
+    position: absolute;
+    right: -18px;
+    bottom: 18px;
+    width: 0;
+    height: 0;
+    border-top: 10px solid transparent;
+    border-bottom: 10px solid transparent;
+    border-left: 18px solid #f25f5c;
+}
+
+.moveButton {
+    min-height: 30px;
+    padding: 6px;
+    border: 2px solid #f25f5c;
+    border-radius: 5px;
+    background-color: rgb(240, 240, 240);
+    color: black;
+    cursor: pointer;
+    font-family: 'Press Start 2P';
+    font-size: 8px;
+    line-height: 11px;
+}
+
+.moveButton:hover {
+    background-color: rgb(250, 250, 121);
+    transition: 300ms;
+}
+
+.machineMoveBubble {
+    position: absolute;
+    right: -88px;
+    top: 78px;
+    width: 180px;
+    display: none;
+    padding: 10px;
+    color: black;
+    background-color: white;
+    border: 4px solid #1982c4;
+    border-radius: 5px;
+    box-shadow: 0 8px 0 rgba(0, 0, 0, 0.12);
+    font-family: 'Press Start 2P';
+    font-size: 8px;
+    line-height: 14px;
+    z-index: 3;
+}
+
+.machineMoveBubble.active {
+    display: block;
+}
+
+.machineMoveBubble::before {
+    content: "";
+    position: absolute;
+    left: -18px;
+    top: 24px;
+    width: 0;
+    height: 0;
+    border-top: 10px solid transparent;
+    border-bottom: 10px solid transparent;
+    border-right: 18px solid #1982c4;
+}
+
+.switchOptions {
+    position: absolute;
+    left: 50%;
+    bottom: 28px;
+    width: 300px;
+    transform: translateX(-50%);
+    display: none;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 10px;
+    background-color: white;
+    border: 4px solid #f25f5c;
+    border-radius: 5px;
+    z-index: 4;
+}
+
+.switchOptions.active {
+    display: grid;
+}
+
+.switchButton {
+    min-height: 34px;
+    border: 2px solid #1982c4;
+    border-radius: 5px;
+    color: black;
+    background-color: rgb(240, 240, 240);
+    cursor: pointer;
+    font-family: 'Press Start 2P';
+    font-size: 8px;
 }
 
 .input {
@@ -149,14 +409,23 @@ body {
 .power {
     position: absolute;
     margin-top: -55px;
-    margin-left: 20px;
+    margin-left: -200px;
     font-size: 13px;
     font-family:'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
     color: rgb(165, 165, 165);
+    background: transparent;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+}
+
+.power:hover {
+    color: rgb(121, 255, 121);
 }
 
 
 .screen {
+    position: relative;
     text-align: center;
     height: 530px;
 	width:  530px;
@@ -173,6 +442,61 @@ body {
 
 }
 
+#halfScreen:not(:empty) {
+    display: flow-root;
+    min-height: 185px;
+}
+
+#halfScreen2:not(:empty) {
+    display: flow-root;
+    min-height: 235px;
+}
+
+.teamDots {
+    position: absolute;
+    display: none;
+    gap: 8px;
+    color: #1982c4;
+    font-size: 16px;
+    z-index: 2;
+}
+
+.teamDots.active {
+    display: flex;
+}
+
+.teamDotsMachine {
+    top: 12px;
+    left: 18px;
+}
+
+.teamDotsPlayer {
+    right: 18px;
+    bottom: 174px;
+}
+
+.teamDot {
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    background-color: #1982c4;
+    border: 2px solid #f25f5c;
+}
+
+.teamDot.defeated {
+    background-color: rgb(214, 214, 214);
+    position: relative;
+}
+
+.teamDot.defeated::after {
+    content: "×";
+    position: absolute;
+    left: -7px;
+    top: -12px;
+    color: #f25f5c;
+    font-size: 26px;
+}
+
 .ballImg {
     width: 60px;
 }
@@ -185,11 +509,27 @@ body {
     line-height: 30px;
 }
 
+.introGale {
+    margin-top: 4px;
+}
+
+.galeIntroText {
+    margin-bottom: 4px;
+    color: black;
+    font-size: 11px;
+    line-height: 18px;
+}
+
 .screenText {
-    margin-top: 5%;
-    font-size: 18px;
-    text-align: center;
-    line-height: 30px;
+    display: block;
+    margin: 10px auto 0 auto;
+    max-width: 180px;
+    max-height: 230px;
+    object-fit: contain;
+}
+
+.trainerGale {
+    image-rendering: pixelated;
 }
 
 .winnerClass {
@@ -204,6 +544,38 @@ body {
     border-color: rgb(203, 206, 200);
 }
 
+.battleResultTrainer {
+    display: flex;
+    justify-content: center;
+    min-height: 175px;
+}
+
+.battleResultTrainer img {
+    max-width: 170px;
+    max-height: 210px;
+    object-fit: contain;
+    image-rendering: pixelated;
+}
+
+.machineResult {
+    align-items: center;
+    padding-top: 10px;
+}
+
+.playerResult {
+    align-items: flex-start;
+    min-height: 235px;
+    padding-top: 35px;
+}
+
+.defeatedMessage {
+    padding-top: 70px;
+    color: #f25f5c;
+    font-family: 'Press Start 2P';
+    font-size: 16px;
+    line-height: 26px;
+}
+
 
 /* ------ -------------   FIRST POKEMON */
 
@@ -216,16 +588,18 @@ body {
 
 .hpText {
     color: green;
+
+    p {
+        margin-bottom: 0.7rem;
+    }
 }
 
 .turnArrow {
-    display: inline-block;
-    width: 18px;
-    color: #f25f5c;
+    display: none;
 }
 
 .pokemonBattleCard.activeTurn .turnArrow::before {
-    content: "▶";
+    content: "";
 }
 
 
@@ -235,7 +609,7 @@ body {
 }
 
 .imageFront:hover {
-    width: 190px;
+    
 }
 
 .dataPok {
@@ -303,7 +677,7 @@ body {
 }
 
 .imageBack:hover {
-    width: 210px;
+    
 }
 
 .dataPok2 {
@@ -340,19 +714,19 @@ body {
 .openBall2  {
     width: 50px;
     margin-left: -150px;
-    margin-top: 130px;
+    margin-top: 150px;
 }
 
 .ballComePok2 {
     width: 50px;
     margin-left: -270px;
-    margin-top: 150px;
+    margin-top: 175px;
 }
 
 .ballComePok2-2 {
     width: 50px;
     margin-left: -180px;
-    margin-top: 110px;
+    margin-top: 135px;
 }
 
 
@@ -370,8 +744,25 @@ body {
         margin-top: 10px;  
     }
 
+    .navbar-nav {
+        align-items: stretch;
+        gap: 8px;
+        padding-top: 10px;
+    }
+
+    .navbar .nav-link.navbarText {
+        margin-top: 0;
+    }
+
+    .navbarBorder {
+        min-width: 100%;
+        padding: 9px 12px;
+    }
+
     .power {
-        display: none;
+        margin-top: -30px;
+        margin-left: 8px;
+        font-size: 11px;
     }
 
     .screen {
@@ -382,8 +773,17 @@ body {
         border-radius: 0px;
     }
 
+    #halfScreen:not(:empty) {
+        min-height: 145px;
+    }
+
+    #halfScreen2:not(:empty) {
+        min-height: 205px;
+    }
+
     .screenText {
-        font-size: 10px;
+        max-width: 130px;
+        max-height: 170px;
     }
 
     .menu {
@@ -397,8 +797,60 @@ body {
         font-size: 7px;
     }
 
-    .turnInfo {
-        font-size: 8px;
+    .battlePanelActive .battleLog {
+        height: 145px;
+    }
+
+    .teamSummary {
+        margin-top: 2px;
+    }
+
+    .teamSummarySprites {
+        gap: 7px;
+    }
+
+    .teamSummaryPokemon {
+        width: 44px;
+        height: 44px;
+    }
+
+    .teamSlot {
+        gap: 6px;
+    }
+
+    .teamSlotEmpty {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .teamSlotForm {
+        width: 100%;
+    }
+
+    .teamSlotInput {
+        flex: 1;
+        width: auto;
+    }
+
+    .moveButtons {
+        grid-template-columns: 1fr;
+        left: 8px;
+        bottom: 117px;
+        width: 150px;
+        gap: 5px;
+        padding: 7px;
+    }
+
+    .moveButton {
+        font-size: 7px;
+    }
+
+    .machineMoveBubble {
+        right: 8px;
+        top: 56px;
+        width: 150px;
+        font-size: 7px;
+        line-height: 12px;
     }
 
     /* ------ ------   POKEMONS Responsive */

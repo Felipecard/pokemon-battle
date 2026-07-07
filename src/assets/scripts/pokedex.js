@@ -3,6 +3,34 @@ const ulElement = document.querySelector('#showPoks')
 
 let offSet = 0
 
+const capitalize = (value) => {
+    return value.charAt(0).toUpperCase() + value.slice(1)
+}
+
+const getPokemonIdFromUrl = (url) => {
+    return url.split('/').filter(Boolean).pop()
+}
+
+const getPokemonArtworkUrl = (pokemonId) => {
+    return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemonId}.png`
+}
+
+const getPokemonInfoImage = (pokemon) => {
+    return pokemon.sprites.other?.['official-artwork']?.front_default
+        || pokemon.sprites.other?.dream_world?.front_default
+        || pokemon.sprites.front_default
+        || getPokemonArtworkUrl(pokemon.id)
+}
+
+const getRandomMoveName = (moves) => {
+    if (!moves.length) {
+        return 'No move'
+    }
+
+    const randomIndex = Math.floor(Math.random() * moves.length)
+    return moves[randomIndex].move.name
+}
+
 const showPok = (offSet) => {
 
     const urlPokedex = `https://pokeapi.co/api/v2/pokemon?limit=20&offset=${offSet}`
@@ -16,16 +44,18 @@ const showPok = (offSet) => {
 
         ulElement.innerHTML += `
             ${
-                pokeData.map((pokemon) => ( 
-                    `
+                pokeData.map((pokemon) => {
+                    const pokemonId = getPokemonIdFromUrl(pokemon.url)
+
+                    return `
                     <li class='cardPok'>
-                        <p class='namePoks'>${pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1)}</p>
-                        <img class='imgPoks' src='https://pokeres.bastionbot.org/images/pokemon/${pokemon.url.toString().substring(34, pokemon.url.length - 1)}.png'>
-                        <p class='number'>No. ${pokemon.url.toString().substring(34, pokemon.url.length - 1)}</p>
-                        <button class="buttonInfo" id="botao2" onclick="infoPok(${pokemon.url.toString().substring(34, pokemon.url.length - 1)})" data-toggle="modal" data-target="#modal-contato" href="#">Info</button>
+                        <p class='namePoks'>${capitalize(pokemon.name)}</p>
+                        <img class='imgPoks' src='${getPokemonArtworkUrl(pokemonId)}' alt='${capitalize(pokemon.name)}'>
+                        <p class='number'>No. ${pokemonId}</p>
+                        <button class="buttonInfo" id="botao2" onclick="infoPok(${pokemonId})" data-toggle="modal" data-target="#modal-contato" href="#">Info</button>
                     </li>
                     `
-                )).join('')
+                }).join('')
             }
         `
     })
@@ -52,20 +82,20 @@ const infoPok = (pokNumber) => {
     
         element1 = document.querySelector('#pokInfos')
 
-        const name1 = data.name.charAt(0).toUpperCase() + data.name.slice(1)
+        const name1 = capitalize(data.name)
         const kg = data.weight / 2.205 
         const kgRound = kg.toFixed(0)
         const force = data.base_experience
         const type = data.types[0].type.name
-        const move1 = data.moves[Math.floor(Math.random() * 49 + 1)].move.name
-        const move2 = data.moves[Math.floor(Math.random() * 49 + 1)].move.name
-        const move3 = data.moves[Math.floor(Math.random() * 49 + 1)].move.name
-        const move4 = data.moves[Math.floor(Math.random() * 49 + 1)].move.name
+        const move1 = getRandomMoveName(data.moves)
+        const move2 = getRandomMoveName(data.moves)
+        const move3 = getRandomMoveName(data.moves)
+        const move4 = getRandomMoveName(data.moves)
 
         element1.innerHTML = `
         <div>
             <h2 class='titleInfo'>${name1}</h2>
-            <img class='infoImage' src='${data.sprites.other.dream_world.front_default}'>
+            <img class='infoImage' src='${getPokemonInfoImage(data)}' alt='${name1}'>
 
             <div class='dataPok'>
                 <p>❏ Weight: ${kgRound} Kg</p>
@@ -82,8 +112,6 @@ const infoPok = (pokNumber) => {
 .catch(err => console.log(err))
 
 }
-
-
 
 
 

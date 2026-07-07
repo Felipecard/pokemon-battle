@@ -36,10 +36,10 @@
                 <div class="collapse navbar-collapse justify-content-end" id="navbarNavAltMarkup">
                   <ul class="navbar-nav">
                     <li class="nav-item">
-                      <a class="nav-link navbarText navbarBorder" href="../../pages/battle/index.html">➧ Battle</a>
+                      <a class="nav-link navbarText navbarBorder active" href="../../pages/battle/index.html" aria-current="page">Battle</a>
                     </li>
                     <li class="nav-item">
-                      <a class="nav-link navbarText navbarBorder" href="../../pages/pokedex/index.html">➧ Pokédex</a>
+                      <a class="nav-link navbarText navbarBorder" href="../../pages/pokedex/index.html">Pokédex</a>
                     </li>
                   </ul>
                 </div>
@@ -50,11 +50,19 @@
         <img src="../../assets/img/wartortle.png" class="wartortle">
         
         <div class="screen">
-            <p class="power" id="powerId" >◉ Power</p>
+            <button class="power" id="powerId" type="button" onclick="resetFullBattle()">◉ Power / Reset</button>
+            <div id="machineTeamDots" class="teamDots teamDotsMachine"></div>
             <div id="halfScreen"></div>
-            <p class="screenText" id="textScreen" >Compare the Pokémons against each other! (This game considers the forces and weaknesses of the Pok types)</p>
+            <div id="textScreen" class="introGale">
+                <p class="galeIntroText">Gale is challenging you!</p>
+                <img src="../../assets/img/trainer_gale.png" class="screenText trainerGale" alt="Trainer Gale">
+            </div>
             <marquee behavior="alternate" direction="down" class="marqueeBall" id="ball"><img src="../../assets/img/pokeballPixel.png" class="ballImg" id="ball"><br>↓</marquee>
             <div id="halfScreen2"></div> 
+            <div id="playerTeamDots" class="teamDots teamDotsPlayer"></div>
+            <div id="machineMoveBubble" class="machineMoveBubble"></div>
+            <div id="moveButtons" class="moveButtons"></div>
+            <div id="switchOptions" class="switchOptions"></div>
         </div>
 
         <div class="winnerClass">
@@ -63,19 +71,19 @@
 
 
         <div class="menu">
-            <p class="txtMenu">Enter a Pokemon name or number:</p>
-            <input class="input" id="input" type="text">
-            <button class="buttons" id="botao" onclick="search()">OK</button>
-            <h4>VS</h4>
-            <input class="input2" id="input2" type="text">
-            <button class="buttons" id="botao2" onclick="search2()">OK</button>
+            <p class="txtMenu">Choose your 3 Pokémon team:</p>
+            <input class="input2 machineChoice" id="input2" type="text">
+            <button class="buttons machineChoice" id="botao2" onclick="search2()">OK</button>
+
+            <div id="playerTeamSlots" class="teamSlots"></div>
+            <div id="teamSummary" class="teamSummary"></div>
+            <button class="randomTeamButton" onclick="chooseRandomPlayerTeam()">Random fast team</button>
 
             <div>
-                <button class="toBattle" onclick="fight()">TO BATTLE</button>
+                <button class="toBattle" onclick="fight()" disabled>START 3x3</button>
             </div>
 
             <div class="battlePanel">
-                <p id="turnInfo" class="turnInfo"></p>
                 <div id="battleLog" class="battleLog"></div>
             </div>   
         </div>
