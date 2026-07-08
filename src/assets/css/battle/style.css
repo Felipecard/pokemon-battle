@@ -67,6 +67,14 @@ body {
     margin-top: 100px;
 }
 
+.battleLayout {
+    width: 100%;
+}
+
+.battleStage {
+    width: 100%;
+}
+
 
 /* ------ -------------   MENU GAME */
 
@@ -211,14 +219,57 @@ body {
     gap: 10px;
 }
 
-.teamSummaryPokemon {
-    width: 54px;
-    height: 54px;
-    object-fit: contain;
-    image-rendering: pixelated;
+.teamSummaryPokemonSlot {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 62px;
+    height: 62px;
+    overflow: hidden;
+    padding: 0;
     background-color: #9fd8ff;
     border: 0;
     border-radius: 5px;
+    appearance: none;
+    cursor: default;
+}
+
+.teamSummaryPokemonSlot:disabled {
+    opacity: 1;
+}
+
+.teamSummaryPokemonSlot.selectable {
+    cursor: pointer;
+    animation: teamPokemonPulse 700ms steps(2, start) infinite;
+}
+
+.teamSummaryPokemonSlot.active {
+    box-shadow: inset 0 0 0 3px #f25f5c;
+}
+
+.teamSummaryPokemonSlot.defeated .teamSummaryPokemon {
+    filter: grayscale(1) brightness(0.55);
+}
+
+.teamSummaryPokemon {
+    width: 68px;
+    height: 68px;
+    object-fit: contain;
+    image-rendering: pixelated;
+    pointer-events: none;
+}
+
+@keyframes teamPokemonPulse {
+    0%, 100% {
+        background-color: #9fd8ff;
+        box-shadow: 0 0 0 0 rgba(250, 250, 121, 0);
+    }
+
+    50% {
+        background-color: rgb(250, 250, 121);
+        box-shadow: 0 0 0 3px #f25f5c;
+    }
 }
 
 .toBattle {  
@@ -374,7 +425,7 @@ body {
 .switchOptions {
     position: absolute;
     left: 50%;
-    bottom: 28px;
+    bottom: 20px;
     width: 300px;
     transform: translateX(-50%);
     display: none;
@@ -508,6 +559,19 @@ body {
     background-color: white;
 }
 
+.continueCounter {
+    position: absolute;
+    left: 50%;
+    bottom: -27px;
+    transform: translateX(-50%);
+    color: white;
+    font-family: 'Press Start 2P';
+    font-size: 9px;
+    line-height: 12px;
+    text-shadow: 2px 2px 0 #12669a;
+    z-index: 3;
+}
+
 
 .screen {
     position: relative;
@@ -608,7 +672,7 @@ body {
 
 .trainerChallengeText {
     max-width: 390px;
-    margin: 72px auto 6px auto;
+    margin: 50px auto 6px auto;
     color: black;
     font-size: 11px;
     line-height: 14px;
@@ -638,6 +702,23 @@ body {
     max-width: 180px;
     max-height: 230px;
     object-fit: contain;
+}
+
+.ashIntroWrap {
+    position: relative;
+    display: inline-block;
+}
+
+.desktopAshArrow {
+    display: none;
+}
+
+.desktopAshCue {
+    display: none;
+}
+
+.desktopAshBall {
+    display: none;
 }
 
 .trainerChallengeImage {
@@ -963,23 +1044,227 @@ body {
 .openBall2  {
     width: 50px;
     margin-left: -150px;
-    margin-top: 150px;
+    margin-top: 120px;
 }
 
 .ballComePok2 {
     width: 50px;
     margin-left: -270px;
-    margin-top: 175px;
+    margin-top: 145px;
 }
 
 .ballComePok2-2 {
     width: 50px;
     margin-left: -180px;
-    margin-top: 135px;
+    margin-top: 105px;
 }
 
 
 /* ------ -------------   RESPONSIVE */
+
+@media screen and (min-width: 1101px) {
+    body {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        overflow-x: hidden;
+    }
+
+    .battleLayout {
+        display: grid;
+        grid-template-columns: 500px 390px;
+        align-items: start;
+        justify-content: center;
+        gap: 0;
+        width: min(100%, 890px);
+        flex: 1;
+        margin: 76px auto 0 auto;
+        padding: 0 20px 24px 20px;
+    }
+
+    .battleStage {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+        min-width: 0;
+    }
+
+    .bulbasaur,
+    .wartortle {
+        display: none;
+    }
+
+    .screen {
+        box-sizing: border-box;
+        position: relative;
+        width: 500px;
+        height: 500px;
+        margin: 0;
+        padding: 18px;
+        border-width: 40px;
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+        box-shadow: 0 14px 0 rgba(0, 0, 0, 0.16);
+    }
+
+    #halfScreen:not(:empty) {
+        min-height: 170px;
+    }
+
+    #halfScreen2:not(:empty) {
+        min-height: 220px;
+    }
+
+    .teamDotsPlayer {
+        bottom: 156px;
+    }
+
+    .power {
+        margin-top: -45px;
+        margin-left: -187px;
+    }
+
+    .muteButton {
+        margin-top: -45px;
+    }
+
+    .menu {
+        box-sizing: border-box;
+        position: relative;
+        align-self: start;
+        width: 390px;
+        min-height: 500px;
+        margin: 0;
+        padding: 18px;
+        border: 9px solid #1982c4;
+        border-radius: 0 20px 20px 0;
+        box-shadow: 0 14px 0 rgba(0, 0, 0, 0.16);
+    }
+
+    .txtMenu {
+        font-size: 12px;
+        line-height: 17px;
+        margin-bottom: 10px;
+    }
+
+    .teamSlots {
+        gap: 6px;
+        margin-top: 8px;
+    }
+
+    .teamSlot {
+        min-height: 32px;
+        padding: 5px 7px;
+    }
+
+    .teamSlotInput {
+        width: 165px;
+        font-size: 8px;
+    }
+
+    .randomTeamButton {
+        margin-top: 8px;
+        font-size: 8px;
+    }
+
+    .aiDifficultyControls {
+        margin-top: 10px;
+    }
+
+    .toBattle {
+        width: 190px;
+        height: 50px;
+        margin-top: 18px;
+        font-size: 12px;
+    }
+
+    .toBattle:hover {
+        font-size: 13px;
+    }
+
+    .battlePanel {
+        margin-top: 14px;
+    }
+
+    .battlePanelActive {
+        margin-top: 10px;
+    }
+
+    .battleLog {
+        height: 145px;
+    }
+
+    .battlePanelActive .battleLog {
+        height: 230px;
+    }
+
+    .winnerClass {
+        margin-top: 12px;
+    }
+
+    footer {
+        height: 42px;
+        margin-top: 0;
+    }
+
+    .links {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        height: 100%;
+        margin-top: 0;
+    }
+
+    .links p {
+        margin: 0;
+        line-height: 1;
+    }
+
+    .socialNet {
+        width: 20px;
+        margin: 0;
+    }
+
+    .desktopIdleBall {
+        display: none !important;
+    }
+
+    .desktopAshCue {
+        position: absolute;
+        top: 48%;
+        right: -82px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        animation: desktopAshArrowMove 520ms ease-in-out infinite alternate;
+    }
+
+    .desktopAshArrow {
+        display: block;
+        color: black;
+        font-size: 24px;
+        line-height: 28px;
+    }
+
+    .desktopAshBall {
+        display: block;
+        width: 40px;
+        height: 28px;
+        image-rendering: pixelated;
+    }
+}
+
+@keyframes desktopAshArrowMove {
+    from {
+        transform: translateX(0);
+    }
+
+    to {
+        transform: translateX(10px);
+    }
+}
 
 @media screen and (max-width: 1100px) {
     .wartortle, .bulbasaur, .diglet {
@@ -1031,21 +1316,28 @@ body {
     }
 
     .power {
-        margin-top: -30px;
-        margin-left: 8px;
+        margin-top: -38px;
+        margin-left: -2px;
         font-size: 11px;
     }
 
     .muteButton {
         right: 8px;
-        margin-top: -30px;
+        margin-top: -38px;
         font-size: 11px;
+    }
+
+    .continueCounter {
+        bottom: -4px;
+        color: #1982c4;
+        font-size: 7px;
+        text-shadow: none;
     }
 
     .screen {
         height: 400px;
         width:  96%;
-        border-width: 10px;
+        border-width: 22px;
         margin-top: 100px;
         border-radius: 0px;
     }
@@ -1086,9 +1378,14 @@ body {
         gap: 7px;
     }
 
+    .teamSummaryPokemonSlot {
+        width: 48px;
+        height: 48px;
+    }
+
     .teamSummaryPokemon {
-        width: 44px;
-        height: 44px;
+        width: 54px;
+        height: 54px;
     }
 
     .teamSlot {
@@ -1162,22 +1459,32 @@ body {
 
 footer {
     background-color: rgb(248, 98, 81);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     text-align: center;
     width: 100%;
-    height: 70px;
+    min-height: 48px;
     font-size: 10px;
     color: white;
-    margin: auto auto auto auto;
+    margin: 0;
 }
 
 .links {
-    margin-top: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 0;
+}
+
+.links p {
+    margin: 0;
 }
 
 .socialNet {
     width: 30px;
-    margin-top: 10px;  
-    margin-bottom: 5px;
+    margin: 0;
 }
 
 .socialNet:hover {

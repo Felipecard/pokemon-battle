@@ -46,59 +46,62 @@
             </nav>
         </header>
 
-        <img src="../../assets/img/bulbasaur.png" class="bulbasaur">
-        <img src="../../assets/img/wartortle.png" class="wartortle">
-        
-        <div class="screen">
-            <button class="power" id="powerId" type="button" onclick="resetFullBattle()">◉ Power / Reset</button>
-            <button class="muteButton" id="muteButton" type="button" onclick="toggleMute()" aria-pressed="false">
-                <span>🎵</span>
-                <span class="muteToggle" aria-hidden="true"></span>
-            </button>
-            <div id="machineTeamDots" class="teamDots teamDotsMachine"></div>
-            <div id="halfScreen"></div>
-            <div id="textScreen" class="introGale">
-                <p class="galeIntroText">Welcome to the great Pokemon challenge. Good luck!</p>
-                <img src="../../assets/img/enter_ash.png" class="screenText trainerGale" alt="Ash entering the Pokemon challenge">
-            </div>
-            <marquee behavior="alternate" direction="down" class="marqueeBall" id="ball"><img src="../../assets/img/pokeballPixel.png" class="ballImg" id="ball"><br>↓</marquee>
-            <div id="halfScreen2"></div> 
-            <div id="playerTeamDots" class="teamDots teamDotsPlayer"></div>
-            <div id="machineMoveBubble" class="machineMoveBubble"></div>
-            <div id="moveButtons" class="moveButtons"></div>
-            <div id="switchOptions" class="switchOptions"></div>
-        </div>
+        <main class="battleLayout">
+            <img src="../../assets/img/bulbasaur.png" class="bulbasaur">
+            <img src="../../assets/img/wartortle.png" class="wartortle">
 
-        <div class="winnerClass">
-            <div id="winner"></div>
-        </div>
+            <section class="battleStage">
+                <div class="screen">
+                    <button class="power" id="powerId" type="button" onclick="resetFullBattle()">◉ Power / Reset</button>
+                    <button class="muteButton" id="muteButton" type="button" onclick="toggleMute()" aria-pressed="false">
+                        <span>🎵</span>
+                        <span class="muteToggle" aria-hidden="true"></span>
+                    </button>
+                    <div id="continueCounter" class="continueCounter"></div>
+                    <div id="machineTeamDots" class="teamDots teamDotsMachine"></div>
+                    <div id="halfScreen"></div>
+                    <div id="textScreen" class="introGale">
+                        <p class="galeIntroText">Welcome to the great Pokemon challenge. Good luck!</p>
+                        <img src="../../assets/img/enter_ash.png" class="screenText trainerGale" alt="Ash entering the Pokemon challenge">
+                    </div>
+                    <marquee behavior="alternate" direction="down" class="marqueeBall" id="ball"><img src="../../assets/img/pokeballPixel.png" class="ballImg" id="ball"><br>↓</marquee>
+                    <div id="halfScreen2"></div>
+                    <div id="playerTeamDots" class="teamDots teamDotsPlayer"></div>
+                    <div id="machineMoveBubble" class="machineMoveBubble"></div>
+                    <div id="moveButtons" class="moveButtons"></div>
+                    <div id="switchOptions" class="switchOptions"></div>
+                </div>
 
+                <div class="winnerClass">
+                    <div id="winner"></div>
+                </div>
+            </section>
 
-        <div class="menu">
-            <p class="txtMenu">Choose your 3 Pokémon team:</p>
-            <input class="input2 machineChoice" id="input2" type="text">
-            <button class="buttons machineChoice" id="botao2" onclick="search2()">OK</button>
+            <aside class="menu">
+                <p class="txtMenu">Choose your 3 Pokémon team:</p>
+                <input class="input2 machineChoice" id="input2" type="text">
+                <button class="buttons machineChoice" id="botao2" onclick="search2()">OK</button>
 
-            <div id="playerTeamSlots" class="teamSlots"></div>
-            <div id="teamSummary" class="teamSummary"></div>
-            <button class="randomTeamButton" onclick="chooseRandomPlayerTeam()">Random fast team</button>
-            <div class="aiDifficultyControls" aria-label="AI difficulty">
-                <button class="instantKoButton" type="button" onclick="instantDefeatOpponent()">TEST KO</button>
-            </div>
+                <div id="playerTeamSlots" class="teamSlots"></div>
+                <div id="teamSummary" class="teamSummary"></div>
+                <button class="randomTeamButton" onclick="chooseRandomPlayerTeam()">Random fast team</button>
+                <div class="aiDifficultyControls" aria-label="AI difficulty">
+                    <button class="instantKoButton" type="button" onclick="instantDefeatOpponent()">TEST KO</button>
+                </div>
 
-            <div>
-                <button class="toBattle" onclick="fight()" disabled>START 3x3</button>
-            </div>
+                <div>
+                    <button class="toBattle" onclick="fight()" disabled>START 3x3</button>
+                </div>
 
-            <div class="battlePanel">
-                <div id="battleLog" class="battleLog"></div>
-            </div>   
-        </div>
+                <div class="battlePanel">
+                    <div id="battleLog" class="battleLog"></div>
+                </div>
+            </aside>
+        </main>
 
         <footer>
             <div class="links">
                 <a href="https://www.linkedin.com/in/felipe-cardoso-70bb5732/" target="_blank"><img class="socialNet" src="../../assets/img/linkedin.png"></a>
-                <a href="https://www.instagram.com/felipe.card2/" target="_blank"><img class="socialNet" src="../../assets/img/instagram.png"></a>
                 <p>©️ Dev by Felipe Cardoso</p>
             </div>
         </footer>

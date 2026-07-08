@@ -47,7 +47,8 @@ const journeyState = {
     isJourneyMode: true,
     currentTrainerIndex: 0,
     completedTrainers: [],
-    continueUsed: false,
+    continueUsed: 0,
+    maxContinues: 2,
     phase: 'setup',
     result: null,
     trainers: [
@@ -125,7 +126,7 @@ const sounds = {
     failAttack: new Audio('../../assets/sounds/fail-atack.mp3'),
     cry: new Audio('../../assets/sounds/cry.mp3'),
     deathPok: new Audio('../../assets/sounds/death-pok.mp3'),
-    pokeballOpen: new Audio('../../assets/sounds/pokeball-open.mp3'),
+    pokeballOpen: new Audio('../../assets/sounds/throw-pokeball.mp3'),
     songBattle: new Audio('../../assets/sounds/song-battle.mp3'),
     finishGame: new Audio('../../assets/sounds/finish-game-congrats.mp3'),
     xEnter: new Audio('../../assets/sounds/x-enter.mp3'),
@@ -1409,6 +1410,7 @@ const handlePokemonDefeated = async (defeatedSide) => {
     }
 
     updateTeamDots(defeatedSide)
+    renderTeamSummary()
     clearMoveButtons()
     hideMachineMoveBubble()
 
@@ -1454,22 +1456,13 @@ const showPlayerSwitchOptions = () => {
     const switchOptions = document.getElementById('switchOptions')
 
     if (!switchOptions) {
+        renderTeamSummary()
         return
     }
 
-    switchOptions.innerHTML = battleState.playerTeam.map((pokemon, index) => {
-        if (pokemon.defeated || index === battleState.playerActiveIndex) {
-            return ''
-        }
-
-        return `
-            <button class="switchButton" onclick="switchPlayerPokemon(${index})">
-                ${pokemon.name} HP ${pokemon.currentHp}/${pokemon.maxHp}
-            </button>
-        `
-    }).join('')
-
-    switchOptions.classList.add('active')
+    switchOptions.classList.remove('active')
+    switchOptions.innerHTML = ''
+    renderTeamSummary()
 }
 
 const hidePlayerSwitchOptions = () => {
@@ -1479,6 +1472,8 @@ const hidePlayerSwitchOptions = () => {
         switchOptions.classList.remove('active')
         switchOptions.innerHTML = ''
     }
+
+    renderTeamSummary()
 }
 
 const switchPlayerPokemon = async (index) => {
@@ -1492,6 +1487,7 @@ const switchPlayerPokemon = async (index) => {
     battleState.player = pokemon
     battleState.waitingForPlayerSwitch = false
     hidePlayerSwitchOptions()
+    renderTeamSummary()
     playSound('pokeballOpen')
     renderPokemon(pokemon, 'player')
     await wait(1900)
@@ -1679,11 +1675,17 @@ const handleJourneyVictory = () => {
 const completeJourney = () => {
     journeyState.phase = 'journeyComplete'
     journeyState.result = 'victory'
-    stopAllSounds()
-    showChampionCelebration()
-    playSound('finishGame')
-    addBattleLog('Congratulations! You conquered the great Pokemon challenge!', 'success')
-    setBattleButton('New Game', false, false)
+    setBattleButton('...', true, false)
+
+    const championTimer = setTimeout(() => {
+        stopAllSounds()
+        showChampionCelebration()
+        playSound('finishGame')
+        addBattleLog('Congratulations! You conquered the great Pokemon challenge!', 'success')
+        setBattleButton('New Game', false, false)
+    }, 3000)
+
+    battleTimers.push(championTimer)
 }
 
 const handleJourneyDefeat = () => {
@@ -1696,7 +1698,7 @@ const handleJourneyDefeat = () => {
         addBattleLog(`Você perdeu para ${trainer.name}.`, 'error')
     }
 
-    setBattleButton(journeyState.continueUsed ? 'New Game' : 'Continue', false, false)
+    setBattleButton(hasContinuesAvailable() ? 'Continue' : 'New Game', false, false)
 }
 
 const handleJourneyButtonAction = () => {
@@ -1711,8 +1713,9 @@ const handleJourneyButtonAction = () => {
     }
 
     if (journeyState.result === 'defeat') {
-        if (!journeyState.continueUsed) {
-            journeyState.continueUsed = true
+        if (hasContinuesAvailable()) {
+            journeyState.continueUsed += 1
+            updateContinueCounter()
             retryCurrentTrainer()
             return
         }
@@ -1731,13 +1734,15 @@ const goToNextTrainer = () => {
 
 const retryCurrentTrainer = () => {
     resetBattleForJourneySetup()
+    showJourneyContinue()
     showMessage(`Continue: enfrente ${getOpponentTrainerName()} novamente.`, 'info')
 }
 
 const restartJourney = () => {
     journeyState.currentTrainerIndex = 0
     journeyState.completedTrainers = []
-    journeyState.continueUsed = false
+    journeyState.continueUsed = 0
+    updateContinueCounter()
     resetBattleForJourneySetup()
     showMessage('New Game: a jornada voltou para Mariner.', 'info')
 }
@@ -1947,7 +1952,8 @@ const resetBattle = () => {
 const resetFullBattle = () => {
     journeyState.currentTrainerIndex = 0
     journeyState.completedTrainers = []
-    journeyState.continueUsed = false
+    journeyState.continueUsed = 0
+    updateContinueCounter()
     resetBattleForJourneySetup()
 }
 
@@ -1967,6 +1973,7 @@ const resetBattleForJourneySetup = () => {
     battleState.waitingForPlayerSwitch = false
     journeyState.phase = 'setup'
     journeyState.result = null
+    updateContinueCounter()
 
     clearSideTimers('player')
     clearSideTimers('opponent')
@@ -2031,9 +2038,65 @@ const showJourneyWelcome = () => {
 
     textScreen.innerHTML = `
         <p class="galeIntroText">Welcome to the great Pokemon challenge. Good luck!</p>
-        <img src="../../assets/img/enter_ash.png" class="screenText trainerGale" alt="Ash entering the Pokemon challenge">
+        <div class="ashIntroWrap">
+            <img src="../../assets/img/enter_ash.png" class="screenText trainerGale" alt="Ash entering the Pokemon challenge">
+            <span class="desktopAshCue" aria-hidden="true">
+                <img src="../../assets/img/pokeballPixel.png" class="desktopAshBall" alt="">
+                <span class="desktopAshArrow">></span>
+            </span>
+        </div>
     `
     textScreen.style.display = 'block'
+    updateIdleBallMode()
+}
+
+const showJourneyContinue = () => {
+    const textScreen = document.getElementById('textScreen')
+
+    if (!textScreen) {
+        return
+    }
+
+    textScreen.innerHTML = `
+        <p class="galeIntroText">Let's continue the battle!</p>
+        <div class="ashIntroWrap">
+            <img src="../../assets/img/ash-cry.png" class="screenText trainerGale" alt="Ash returns to continue the Pokemon challenge">
+            <span class="desktopAshCue" aria-hidden="true">
+                <img src="../../assets/img/pokeballPixel.png" class="desktopAshBall" alt="">
+                <span class="desktopAshArrow">→</span>
+            </span>
+        </div>
+    `
+    textScreen.style.display = 'block'
+    updateIdleBallMode()
+}
+
+const updateIdleBallMode = () => {
+    const ball = document.getElementById('ball')
+
+    if (!ball) {
+        return
+    }
+
+    ball.classList.toggle('desktopIdleBall', window.innerWidth > 1100)
+}
+
+const updateContinueCounter = () => {
+    const continueCounter = document.getElementById('continueCounter')
+
+    if (!continueCounter) {
+        return
+    }
+
+    continueCounter.textContent = `CONTINUE x${getRemainingContinues()}`
+}
+
+const getRemainingContinues = () => {
+    return Math.max(journeyState.maxContinues - journeyState.continueUsed, 0)
+}
+
+const hasContinuesAvailable = () => {
+    return getRemainingContinues() > 0
 }
 
 const updateScreenTrainerIntro = (showChallenge = false, selectedTrainer = getCurrentTrainer()) => {
@@ -2108,7 +2171,8 @@ const setBattleMenuMode = (mode) => {
     }
 
     if (menuTitle) {
-        menuTitle.style.display = isSetup ? 'block' : 'none'
+        menuTitle.textContent = isSetup ? 'Choose your 3 Pokémon team:' : 'Your team:'
+        menuTitle.style.display = 'block'
     }
 
     if (slots) {
@@ -2143,7 +2207,18 @@ const renderTeamSummary = () => {
             return ''
         }
 
-        return `<img class="teamSummaryPokemon" src="${pokemon.sprites.front}" alt="${pokemon.name}" title="${pokemon.name}">`
+        const isActive = index === battleState.playerActiveIndex
+        const isSelectable = battleState.waitingForPlayerSwitch && !pokemon.defeated && !isActive
+        const defeatedClass = pokemon.defeated ? ' defeated' : ''
+        const selectableClass = isSelectable ? ' selectable' : ''
+        const activeClass = isActive ? ' active' : ''
+        const disabledAttribute = isSelectable ? '' : ' disabled'
+
+        return `
+            <button class="teamSummaryPokemonSlot${defeatedClass}${selectableClass}${activeClass}" type="button" onclick="switchPlayerPokemon(${index})" title="${pokemon.name} HP ${pokemon.currentHp}/${pokemon.maxHp}"${disabledAttribute}>
+                <img class="teamSummaryPokemon" src="${pokemon.sprites.front}" alt="${pokemon.name}">
+            </button>
+        `
     }).join('')
 
     teamSummary.innerHTML = `
@@ -2192,6 +2267,7 @@ const clearBattleScreen = ({ showIdleBall = true, showWelcome = true } = {}) => 
 
     if (ball) {
         ball.style.display = showIdleBall ? 'inline-block' : 'none'
+        ball.classList.remove('desktopIdleBall')
     }
 
     if (power) {
@@ -2306,6 +2382,7 @@ window.addEventListener('load', () => {
     showJourneyWelcome()
     updateAiDifficultyButtons()
     updateMuteButton()
+    updateContinueCounter()
     updateStartButton()
     playSound('start')
 })
