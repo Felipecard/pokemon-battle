@@ -157,6 +157,11 @@ body {
     padding: 0 6px;
 }
 
+.teamSlotLoading {
+    color: #1982c4;
+    font-size: 6px;
+}
+
 .teamSlot button:disabled,
 .teamSlotInput:disabled {
     cursor: default;
@@ -185,6 +190,13 @@ body {
     display: flex;
     justify-content: center;
     margin-top: 12px;
+}
+
+.testTools {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin: 10px auto 18px auto;
 }
 
 .instantKoButton {
@@ -258,6 +270,53 @@ body {
     object-fit: contain;
     image-rendering: pixelated;
     pointer-events: none;
+}
+
+.potionControl {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 4px 8px;
+    color: white;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    font-family: 'Press Start 2P';
+    font-size: 12px;
+}
+
+.potionControl:disabled {
+    cursor: default;
+    opacity: 0.45;
+}
+
+.potionControl.empty {
+    filter: grayscale(1);
+}
+
+.potionImg {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    image-rendering: pixelated;
+}
+
+.potionHealFlash .dataPok2 {
+    animation: potionHealFlash 180ms ease-in-out 2;
+}
+
+@keyframes potionHealFlash {
+    0%, 100% {
+        color: inherit;
+        text-shadow: none;
+    }
+
+    50% {
+        color: #f25f5c;
+        text-shadow: 0 0 6px rgba(242, 95, 92, 0.75);
+    }
 }
 
 @keyframes teamPokemonPulse {
@@ -826,8 +885,16 @@ body {
     line-height: 18px;
 }
 
+.journeyProgressTitle {
+    margin: 32px auto 0 auto;
+    color: black;
+    font-size: 8px;
+    line-height: 12px;
+    text-align: center;
+}
+
 .journeyFaceRow {
-    margin-top: 42px;
+    margin-top: 8px;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -1012,7 +1079,7 @@ body {
 
 .dataPok2 {
     float: right;
-    margin-top: 100px;
+    margin-top: 95px;
     margin-right: 25px;
     margin-bottom: 20px;
     font-size: 9px;
@@ -1078,8 +1145,10 @@ body {
         gap: 0;
         width: min(100%, 890px);
         flex: 1;
-        margin: 76px auto 0 auto;
+        min-height: calc(100vh - 98px);
+        margin: 56px auto 0 auto;
         padding: 0 20px 24px 20px;
+        align-content: center;
     }
 
     .battleStage {
@@ -1170,6 +1239,11 @@ body {
 
     .aiDifficultyControls {
         margin-top: 10px;
+    }
+
+    .testTools {
+        margin-top: -10px;
+        margin-bottom: 16px;
     }
 
     .toBattle {
@@ -1301,6 +1375,11 @@ body {
         width: 100%;
     }
 
+    .testTools {
+        width: 300px;
+        margin-top: 12px;
+    }
+
     .journeyVictoryScreen {
         min-height: 300px;
     }
@@ -1315,9 +1394,25 @@ body {
         height: 38px;
     }
 
+    .journeyFace.defeated::after {
+        left: -2px;
+        top: -3px;
+        font-size: 49px;
+        line-height: 56px;
+    }
+
+    .battleResultTrainer img {
+        max-width: 110px;
+    }
+
+    .winnerMensage {
+        font-size: 20px;
+        margin-top: 10px;
+    }
+
     .power {
         margin-top: -38px;
-        margin-left: -2px;
+        margin-left: -130px;
         font-size: 11px;
     }
 
@@ -1328,37 +1423,81 @@ body {
     }
 
     .continueCounter {
-        bottom: -4px;
-        color: #1982c4;
-        font-size: 7px;
+        bottom: -18px;
+        color: white;
+        font-size: 8px;
         text-shadow: none;
     }
 
     .screen {
-        height: 400px;
+        box-sizing: border-box;
+        height: 358px;
         width:  96%;
-        border-width: 22px;
+        border-width: 30px;
         margin-top: 100px;
-        border-radius: 0px;
+        border-radius: 24px;
     }
 
     #halfScreen:not(:empty) {
-        min-height: 145px;
+        min-height: 122px;
     }
 
     #halfScreen2:not(:empty) {
-        min-height: 205px;
+        min-height: 164px;
+    }
+
+    .galeIntroText {
+        margin-top: 0px;
+        font-size: 13px;
+        line-height: 18px;
+    }
+
+    .continueIntroText {
+        margin-top: 0px;
+        color: black;
+        font-size: 16px;
+        line-height: 24px;
+        text-shadow: none;
+    }
+
+    .trainerChallengeText {
+        margin-top: 42px;
+        font-size: 9px;
+        line-height: 12px;
+    }
+
+    .trainerAiText {
+        font-size: 9px;
+        line-height: 12px;
     }
 
     .screenText {
-        max-width: 130px;
-        max-height: 170px;
+        max-width: 118px;
+        max-height: 125px;
+    }
+
+    .ballImg {
+        width: 40px;
+    }
+
+    .marqueeBall {
+        margin-top: 0%;
+        width: 200px;
+        height: 84px;
+        text-align: center;
+        line-height: 30px;
     }
 
     .menu {
+        box-sizing: border-box;
         margin-top: -100px;
-        border-radius: 0px;
+        border: 9px solid #1982c4;
+        border-radius: 0px 0px 24px 24px;
         width: 300px;
+    }
+
+    .txtMenu {
+        font-size: 10px;
     }
 
     .battleLog {
@@ -1408,48 +1547,206 @@ body {
 
     .moveButtons {
         grid-template-columns: 1fr;
-        left: 8px;
-        bottom: 117px;
+        left: 151px;
+        bottom: -64px;
         width: 150px;
         gap: 5px;
         padding: 7px;
     }
 
+    .moveButtons::before {
+        left: -14px;
+        right: auto;
+        top: 8px;
+        bottom: auto;
+        border-top: 8px solid transparent;
+        border-bottom: 8px solid transparent;
+        border-left: 0;
+        border-right: 14px solid #f25f5c;
+    }
+
     .moveButton {
-        font-size: 7px;
+        min-height: 24px;
+        padding: 4px;
+        font-size: 6px;
+        line-height: 9px;
     }
 
     .machineMoveBubble {
-        right: 8px;
-        top: 56px;
+        right: 138px;
+        top: 88px;
         width: 150px;
         font-size: 7px;
         line-height: 12px;
     }
 
+    .machineMoveBubble::before {
+        left: auto;
+        right: -14px;
+        top: 8px;
+        bottom: auto;
+        border-top: 8px solid transparent;
+        border-bottom: 8px solid transparent;
+        border-left: 14px solid #1982c4;
+        border-right: 0;
+    }
+
+    .toBattle {
+        width: 170px;
+        height: 44px;
+        margin-top: 14px;
+        color: white;
+        font-size: 10px;
+    }
+
+    .toBattle:hover {
+        color: white;
+        font-size: 10px;
+    }
+
+    .teamDots {
+        gap: 5px;
+        font-size: 12px;
+    }
+
+    .teamDotsMachine {
+        top: 8px;
+        left: 10px;
+    }
+
+    .teamDotsPlayer {
+        right: 10px;
+        bottom: 145px;
+    }
+
+    .teamDot {
+        width: 9px;
+        height: 9px;
+        border-width: 1px;
+    }
+
+    .teamDot.defeated::after {
+        left: -5px;
+        top: -10px;
+        font-size: 18px;
+    }
+
+    .defeatedMessage {
+        padding-top: 58px;
+        font-size: 10px;
+        line-height: 17px;
+    }
+
+    .smokePok1,
+    .smokePok2 {
+        width: 72px;
+    }
+
+    .openBall,
+    .openBall2,
+    .ballCome,
+    .ballCome2,
+    .ballComePok2,
+    .ballComePok2-2 {
+        width: 34px;
+    }
+
     /* ------ ------   POKEMONS Responsive */
 
+    .pokemonBattleCard {
+        min-height: 122px;
+        overflow: visible;
+    }
+
+    #pokemon2 {
+        min-height: 158px;
+    }
+
     .dataPok {
+        position: absolute;
+        left: 8px;
+        top: 8px;
+        width: 112px;
+        float: none;
+        margin: 0;
         font-size: 7px;
+        line-height: 9px;
+        text-align: left;
+        z-index: 2;
     }
 
     .dataPok2 {
-        margin-top: 80px;
+        position: absolute;
+        right: 4px;
+        top: 18px;
+        width: 112px;
+        float: none;
+        margin: 0;
         font-size: 7px;
-        margin-right: 5px;
+        line-height: 9px;
+        text-align: left;
+        z-index: 2;
+    }
+
+    .dataPok p,
+    .dataPok2 p {
+        margin-bottom: 3px;
     }
     
     .dataPok h2, .dataPok2 h2  {
-        font-size: 11px;
+        font-size: 10px;
+        line-height: 12px;
+        margin-bottom: 10px;
+    }
+
+    .lifeBar {
+        margin-top: -6px;
+        margin-bottom: 6px;
+        height: 6px;
+    }
+
+    .life1,
+    .life2 {
+        margin-top: 0;
+        height: 4px;
+    }
+
+    .hpText {
+        margin-bottom: 3px;
     }
 
     .imageFront  {
-        width: 150px;
+        position: absolute;
+        right: 4px;
+        top: -8px;
+        width: 130px;
+        float: none;
+        margin: 0;
     }
 
     .imageBack {
-        width: 160px;
-        margin-top: 50px;
+        position: absolute;
+        left: -20px;
+        top: 2px;
+        width: 142px;
+        float: none;
+        margin: 0;
+    }
+
+    .smokePok2 {
+        margin-top: 58px;
+    }
+
+    .openBall2 {
+        margin-top: 88px;
+    }
+
+    .ballComePok2 {
+        margin-top: 110px;
+    }
+
+    .ballComePok2-2 {
+        margin-top: 75px;
     }
 
  }

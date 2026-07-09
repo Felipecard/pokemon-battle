@@ -54,7 +54,7 @@
                 <div class="screen">
                     <button class="power" id="powerId" type="button" onclick="resetFullBattle()">◉ Power / Reset</button>
                     <button class="muteButton" id="muteButton" type="button" onclick="toggleMute()" aria-pressed="false">
-                        <span>🎵</span>
+                        <span>📢</span>
                         <span class="muteToggle" aria-hidden="true"></span>
                     </button>
                     <div id="continueCounter" class="continueCounter"></div>
@@ -84,10 +84,11 @@
 
                 <div id="playerTeamSlots" class="teamSlots"></div>
                 <div id="teamSummary" class="teamSummary"></div>
+                <button id="potionControl" class="potionControl" type="button" onclick="usePotion()">
+                    <img src="../../assets/img/potion.png" class="potionImg" alt="Potion">
+                    <span id="potionCount">x3</span>
+                </button>
                 <button class="randomTeamButton" onclick="chooseRandomPlayerTeam()">Random fast team</button>
-                <div class="aiDifficultyControls" aria-label="AI difficulty">
-                    <button class="instantKoButton" type="button" onclick="instantDefeatOpponent()">TEST KO</button>
-                </div>
 
                 <div>
                     <button class="toBattle" onclick="fight()" disabled>START 3x3</button>
@@ -98,6 +99,10 @@
                 </div>
             </aside>
         </main>
+
+        <div class="testTools">
+            <button class="instantKoButton" type="button" onclick="instantDefeatOpponent()">TEST KO</button>
+        </div>
 
         <footer>
             <div class="links">
