@@ -17,26 +17,26 @@ const battleState = {
 }
 
 const aiDifficultyLabels = {
-    easy: 'Fácil',
-    medium: 'Média',
-    hard: 'Difícil'
+    easy: 'Easy',
+    medium: 'Medium',
+    hard: 'Hard'
 }
 
 const teamDifficultyProfiles = {
     easy: {
-        label: 'mais fraco',
+        label: 'weaker',
         firstRange: [0.55, 0.9],
         secondRange: [0.45, 1],
         targetMultiplier: 0.75
     },
     medium: {
-        label: 'equilibrado',
+        label: 'balanced',
         firstRange: [0.85, 1.15],
         secondRange: [0.75, 1.25],
         targetMultiplier: 1
     },
     hard: {
-        label: 'mais forte',
+        label: 'stronger',
         firstRange: [1.1, 1.55],
         secondRange: [1, 1.75],
         targetMultiplier: 1.35
@@ -49,6 +49,8 @@ const journeyState = {
     completedTrainers: [],
     continueUsed: 0,
     maxContinues: 2,
+    potionsUsed: 0,
+    maxPotions: 3,
     phase: 'setup',
     result: null,
     trainers: [
@@ -57,7 +59,7 @@ const journeyState = {
             difficulty: 'easy',
             theme: 'water',
             challengeText: 'The waves always reveal who is ready to fight.',
-            defeatText: 'Você navegou melhor do que eu esperava.',
+            defeatText: 'You sailed better than I expected.',
             image: '../../assets/img/trainer_mariner.png',
             face: '../../assets/img/face-mariner.png',
             index: 0
@@ -67,7 +69,7 @@ const journeyState = {
             difficulty: 'easy',
             theme: 'storm',
             challengeText: 'The Dragon and my old master are leading the way. I want to see if you can keep up.',
-            defeatText: 'Você resistiu à tempestade.',
+            defeatText: 'You endured the storm.',
             image: '../../assets/img/trainer_gale.png',
             face: '../../assets/img/face-gale.png',
             index: 1
@@ -77,7 +79,7 @@ const journeyState = {
             difficulty: 'medium',
             theme: 'shadow',
             challengeText: 'The fear of death is a human weakness... Let me show you the true value of eternal power.',
-            defeatText: 'Você passou pelo meu teste.',
+            defeatText: 'You passed my test.',
             image: '../../assets/img/maru.png',
             face: '../../assets/img/face-maru.png',
             index: 2
@@ -87,7 +89,7 @@ const journeyState = {
             difficulty: 'medium',
             theme: 'river',
             challengeText: 'Fishing requires patience. So does battle.',
-            defeatText: 'Você fisgou uma grande vitória.',
+            defeatText: 'You reeled in a great victory.',
             image: '../../assets/img/fisherman.png',
             face: '../../assets/img/face-fisherman.png',
             index: 3
@@ -97,7 +99,7 @@ const journeyState = {
             difficulty: 'hard',
             theme: 'blade',
             challengeText: 'A blade recognizes only those who fight with honor.',
-            defeatText: 'Sua coragem cortou até o silêncio.',
+            defeatText: 'Your courage cut through even the silence.',
             image: '../../assets/img/swordlord.png',
             face: '../../assets/img/face-lordsword.png',
             index: 4
@@ -107,7 +109,7 @@ const journeyState = {
             difficulty: 'hard',
             theme: 'champion',
             challengeText: 'Hello old friend, you have come a long way. Now prove you deserve the top.',
-            defeatText: 'Hmph... nada mal. Talvez você seja mesmo um campeão.',
+            defeatText: 'Hmph... not bad. Maybe you really are a champion.',
             image: '../../assets/img/ond-gary.png',
             face: '../../assets/img/face-gary.png',
             index: 5
@@ -115,6 +117,8 @@ const journeyState = {
     ]
 }
 
+const pokemonApiCache = {}
+const moveDetailsCache = {}
 const pokemonCandidateCache = {}
 const teamSize = 3
 const maxMachinePokemonId = 251
@@ -124,6 +128,7 @@ const sounds = {
     choose: new Audio('../../assets/sounds/choose.mp3'),
     attack: new Audio('../../assets/sounds/choose_atack.mp3'),
     failAttack: new Audio('../../assets/sounds/fail-atack.mp3'),
+    glug: new Audio('../../assets/sounds/glug.mp3'),
     cry: new Audio('../../assets/sounds/cry.mp3'),
     deathPok: new Audio('../../assets/sounds/death-pok.mp3'),
     pokeballOpen: new Audio('../../assets/sounds/throw-pokeball.mp3'),
@@ -213,7 +218,7 @@ const fight = () => {
         return
     }
 
-    addBattleLog('Escolha um golpe para atacar.', 'error')
+    addBattleLog('Choose a move to attack.', 'error')
 }
 
 const addPokemonToPlayerTeam = async (slotIndex) => {
@@ -239,10 +244,10 @@ const addPokemonToPlayerTeam = async (slotIndex) => {
         setSearchControls(true)
         clearMessage()
         const data = await getPokemon(pokName)
-        const moves = await getPokemonMoves(data.moves)
-        const pokemon = normalizePokemon(data, moves)
+        const pokemon = normalizePokemon(data, [getFallbackMove()], false)
 
         if (resetToken !== battleState.resetToken) {
+            setSearchControls(false)
             return
         }
 
@@ -251,12 +256,43 @@ const addPokemonToPlayerTeam = async (slotIndex) => {
         renderPlayerTeamSlots()
         renderTeamSummary()
         updateStartButton()
-        addBattleLog(`${pokemon.name} entrou no slot ${slotIndex + 1}!`, 'success')
+        addBattleLog(`${pokemon.name} joined slot ${slotIndex + 1}!`, 'success')
+        setSearchControls(false)
+
+        loadPlayerPokemonMoves(pokemon, data.moves, slotIndex, resetToken)
     } catch (err) {
         showMessage('Pokemon not found!', 'error')
         console.log(err)
-    } finally {
         setSearchControls(false)
+    }
+}
+
+const loadPlayerPokemonMoves = async (pokemon, rawMoves, slotIndex, resetToken) => {
+    try {
+        const moves = await getPokemonMoves(rawMoves)
+
+        if (resetToken !== battleState.resetToken || battleState.playerTeam[slotIndex] !== pokemon) {
+            return
+        }
+
+        pokemon.moves = moves
+        pokemon.ready = true
+        renderPlayerTeamSlots()
+        renderTeamSummary()
+        updateStartButton()
+        addBattleLog(`${pokemon.name} is ready to battle!`, 'success')
+    } catch (err) {
+        if (resetToken !== battleState.resetToken || battleState.playerTeam[slotIndex] !== pokemon) {
+            return
+        }
+
+        pokemon.moves = [getFallbackMove()]
+        pokemon.ready = true
+        renderPlayerTeamSlots()
+        renderTeamSummary()
+        updateStartButton()
+        addBattleLog(`${pokemon.name} will use basic moves in this battle.`, 'info')
+        console.log(err)
     }
 }
 
@@ -295,7 +331,7 @@ const renderPlayerTeamSlots = () => {
 
         return `
             <div class="teamSlot">
-                <span>${pokemon.name}</span>
+                <span>${pokemon.name}${pokemon.ready ? '' : ' <small class="teamSlotLoading">loading...</small>'}</span>
                 <button class="teamSlotRemove" onclick="removePokemonFromPlayerTeam(${index})">X</button>
             </div>
         `
@@ -323,7 +359,10 @@ const getFirstEmptyTeamSlot = () => {
 }
 
 const isPlayerTeamComplete = () => {
-    return getTeamSlotIndexes().every((index) => battleState.playerTeam[index])
+    return getTeamSlotIndexes().every((index) => {
+        const pokemon = battleState.playerTeam[index]
+        return pokemon && pokemon.ready
+    })
 }
 
 const handleTeamSlotKey = (event, slotIndex) => {
@@ -346,28 +385,34 @@ const chooseRandomPlayerTeam = async () => {
         clearBattleLog()
 
         const randomIds = getUniqueRandomPokemonIds(teamSize)
-        const randomPokemon = await Promise.all(randomIds.map(async (pokemonId) => {
+        const pokemonData = await Promise.all(randomIds.map(async (pokemonId) => {
             const data = await getPokemon(pokemonId.toString())
-            const moves = await getPokemonMoves(data.moves)
 
-            return normalizePokemon(data, moves)
+            return data
         }))
 
         if (resetToken !== battleState.resetToken) {
+            setSearchControls(false)
+            setRandomTeamButton(false)
             return
         }
 
-        battleState.playerTeam = randomPokemon
+        battleState.playerTeam = pokemonData.map((data) => normalizePokemon(data, [getFallbackMove()], false))
         battleState.machineTeam = []
         playSound('choose')
         renderPlayerTeamSlots()
         renderTeamSummary()
         updateStartButton()
-        addBattleLog('Seu time aleatório foi escolhido!', 'success')
+        addBattleLog('Your random team was chosen!', 'success')
+        setSearchControls(false)
+        setRandomTeamButton(false)
+
+        pokemonData.forEach((data, index) => {
+            loadPlayerPokemonMoves(battleState.playerTeam[index], data.moves, index, resetToken)
+        })
     } catch (err) {
         showMessage('Could not choose a random team!', 'error')
         console.log(err)
-    } finally {
         setSearchControls(false)
         setRandomTeamButton(false)
     }
@@ -431,14 +476,34 @@ const loadPokemon = async (side) => {
 }
 
 const getPokemon = async (pokName) => {
-    const url = `https://pokeapi.co/api/v2/pokemon/${pokName.toLowerCase()}/`
-    const response = await fetch(url)
+    const pokemonKey = pokName.toString().toLowerCase()
 
-    if (!response.ok) {
-        throw new Error('Pokemon not found')
+    if (pokemonApiCache[pokemonKey]) {
+        return pokemonApiCache[pokemonKey]
     }
 
-    return response.json()
+    const url = `https://pokeapi.co/api/v2/pokemon/${pokemonKey}/`
+    const pokemonRequest = fetch(url)
+        .then(async (response) => {
+            if (!response.ok) {
+                throw new Error('Pokemon not found')
+            }
+
+            const data = await response.json()
+            pokemonApiCache[pokemonKey] = data
+            pokemonApiCache[data.id.toString()] = data
+            pokemonApiCache[data.name.toLowerCase()] = data
+
+            return data
+        })
+        .catch((err) => {
+            delete pokemonApiCache[pokemonKey]
+            throw err
+        })
+
+    pokemonApiCache[pokemonKey] = pokemonRequest
+
+    return pokemonRequest
 }
 
 const getPokemonMoves = async (pokemonMoves) => {
@@ -463,29 +528,37 @@ const getPokemonMoves = async (pokemonMoves) => {
 }
 
 const getMoveDetails = async (url) => {
-    try {
-        const response = await fetch(url)
-
-        if (!response.ok) {
-            return null
-        }
-
-        const data = await response.json()
-
-        return {
-            name: data.name,
-            displayName: formatMoveName(data.name),
-            type: data.type.name,
-            displayType: capitalize(data.type.name),
-            power: data.power || 0,
-            accuracy: data.accuracy ?? 100,
-            damageClass: data.damage_class ? data.damage_class.name : '',
-            pp: data.pp
-        }
-    } catch (err) {
-        console.log(err)
-        return null
+    if (moveDetailsCache[url]) {
+        return moveDetailsCache[url]
     }
+
+    const moveRequest = fetch(url)
+        .then(async (response) => {
+            if (!response.ok) {
+                return null
+            }
+
+            const data = await response.json()
+
+            return {
+                name: data.name,
+                displayName: formatMoveName(data.name),
+                type: data.type.name,
+                displayType: capitalize(data.type.name),
+                power: data.power || 0,
+                accuracy: data.accuracy ?? 100,
+                damageClass: data.damage_class ? data.damage_class.name : '',
+                pp: data.pp
+            }
+        })
+        .catch((err) => {
+            console.log(err)
+            return null
+        })
+
+    moveDetailsCache[url] = moveRequest
+
+    return moveRequest
 }
 
 const getFallbackMove = () => {
@@ -516,6 +589,13 @@ const getPlayerTurnMoves = (pokemon) => {
     return shuffleList(moves).slice(0, 4)
 }
 
+const getMachineTurnMoves = (pokemon) => {
+    const moves = pokemon.moves && pokemon.moves.length ? pokemon.moves : [getFallbackMove()]
+    const selectedMoves = shuffleList(moves).slice(0, 4)
+
+    return selectedMoves.length ? selectedMoves : [getFallbackMove()]
+}
+
 const shuffleList = (list) => {
     return [...list].sort(() => Math.random() - 0.5)
 }
@@ -524,7 +604,7 @@ const getRandomItem = (list) => {
     return list[Math.floor(Math.random() * list.length)]
 }
 
-const normalizePokemon = (data, moves) => {
+const normalizePokemon = (data, moves, ready = true) => {
     const stats = normalizeStats(data.stats)
 
     return {
@@ -541,7 +621,7 @@ const normalizePokemon = (data, moves) => {
         },
         moves,
         stats,
-        ready: true
+        ready
     }
 }
 
@@ -618,8 +698,8 @@ const selectMachinePokemon = async (playerPokemon) => {
     battleState.opponent = null
     clearSideTimers('opponent')
     document.getElementById(pokemonSides.opponent.containerId).innerHTML = ''
-    addBattleLog('A máquina está escolhendo um adversário equilibrado...')
-    addBattleLog('Analisando candidatos...')
+    addBattleLog('The machine is choosing a balanced opponent...')
+    addBattleLog('Analyzing candidates...')
 
     try {
         const machinePokemon = await getBalancedMachinePokemon(playerPokemon)
@@ -632,14 +712,14 @@ const selectMachinePokemon = async (playerPokemon) => {
 
         battleState.opponent = opponent
         renderPokemon(opponent, 'opponent')
-        addBattleLog(`A máquina escolheu ${opponent.name}!`)
+        addBattleLog(`The machine chose ${opponent.name}!`)
     } catch (err) {
         console.log(err)
         const fallback = await getFallbackMachinePokemon(playerPokemon)
 
         battleState.opponent = fallback
         renderPokemon(fallback, 'opponent')
-        addBattleLog(`A máquina escolheu ${fallback.name}!`)
+        addBattleLog(`The machine chose ${fallback.name}!`)
     } finally {
         battleState.selectingMachine = false
         setSearchControls(false)
@@ -652,8 +732,8 @@ const generateMachineTeam = async (playerTeam) => {
     battleState.selectingMachine = true
     battleState.machineTeam = []
     updateStartButton()
-    addBattleLog('Você montou seu time!', 'success')
-    addBattleLog(`${trainerName} está montando um time ${getTeamDifficultyProfile().label}...`)
+    addBattleLog('You built your team!', 'success')
+    addBattleLog(`${trainerName} is building a ${getTeamDifficultyProfile().label} team...`)
 
     const excludedIds = new Set(playerTeam.filter(Boolean).map((pokemon) => pokemon.id))
 
@@ -681,10 +761,10 @@ const generateMachineTeam = async (playerTeam) => {
 
             excludedIds.add(opponent.id)
             battleState.machineTeam.push(opponent)
-            addBattleLog(`${trainerName} adicionou ${opponent.name} ao time.`)
+            addBattleLog(`${trainerName} added ${opponent.name} to the team.`)
         }
 
-        addBattleLog(`${trainerName} escolheu seu time!`, 'success')
+        addBattleLog(`${trainerName} chose a team!`, 'success')
     } finally {
         battleState.selectingMachine = false
         updateStartButton()
@@ -694,16 +774,16 @@ const generateMachineTeam = async (playerTeam) => {
 const getBalancedMachinePokemon = async (playerPokemon, excludedIds = new Set()) => {
     const playerPower = calculatePokemonPower(playerPokemon)
     const profile = getTeamDifficultyProfile()
-    const firstCandidates = await getCandidateSample(playerPokemon, 15, excludedIds)
+    const firstCandidates = await getCandidateSample(playerPokemon, 10, excludedIds)
     let validCandidates = findCandidatesInPowerRange(firstCandidates, playerPower, profile.firstRange[0], profile.firstRange[1])
 
     if (validCandidates.length) {
         return getRandomItem(validCandidates)
     }
 
-    addBattleLog('Buscando mais candidatos...')
+    addBattleLog('Searching for more candidates...')
 
-    const secondCandidates = await getCandidateSample(playerPokemon, 15, excludedIds)
+    const secondCandidates = await getCandidateSample(playerPokemon, 10, excludedIds)
     const allCandidates = [...firstCandidates, ...secondCandidates]
     validCandidates = findCandidatesInPowerRange(allCandidates, playerPower, profile.secondRange[0], profile.secondRange[1])
 
@@ -816,21 +896,21 @@ const getCurrentTrainer = () => {
 
 const getOpponentTrainerName = () => {
     const trainer = getCurrentTrainer()
-    return trainer ? trainer.name : 'A máquina'
+    return trainer ? trainer.name : 'The machine'
 }
 
 const loadTrainerBattle = async (trainerIndex) => {
     const trainer = journeyState.trainers[trainerIndex]
 
     if (!trainer) {
-        showMessage('Fim da demonstração da jornada.', 'success')
+        showMessage('End of the journey demo.', 'success')
         setBattleButton('New Game', false, false)
         journeyState.phase = 'journeyComplete'
         return
     }
 
     if (battleState.selectingMachine) {
-        showMessage(`${trainer.name} está escolhendo seu time!`, 'info')
+        showMessage(`${trainer.name} is choosing a team!`, 'info')
         return
     }
 
@@ -866,7 +946,7 @@ const loadTrainerBattle = async (trainerIndex) => {
     setCurrentTrainerAiDifficulty()
     setSearchControls(true)
     setBattleButton('Preparing...', true, false)
-    addBattleLog(`${trainer.name} está escolhendo seu time...`)
+    addBattleLog(`${trainer.name} is choosing a team...`)
 
     try {
         await generateMachineTeam(battleState.playerTeam)
@@ -989,7 +1069,7 @@ const startThreeVsThreeBattle = async () => {
     }
 
     updateHpBar('opponent')
-    addBattleLog(`${getOpponentTrainerName()} enviou ${pokemon2.name}!`)
+    addBattleLog(`${getOpponentTrainerName()} sent out ${pokemon2.name}!`)
 
     renderPokemon(pokemon1, 'player')
     await wait(1900)
@@ -999,12 +1079,12 @@ const startThreeVsThreeBattle = async () => {
     }
 
     updateHpBar('player')
-    addBattleLog(`${pokemon1.name} entrou em campo!`)
+    addBattleLog(`${pokemon1.name} entered the battle!`)
 
     updateTeamDots('player')
     updateTeamDots('opponent')
 
-    addBattleLog('A batalha começou!', 'success')
+    addBattleLog('The battle began!', 'success')
     addBattleLog(getFirstTurnMessage())
     handleTurnChange()
 }
@@ -1019,14 +1099,14 @@ const executeMove = (move) => {
     const attacker = battleState[attackerSide]
     const defender = battleState[defenderSide]
 
-    addBattleLog(`${attacker.name} usou ${move.displayName}!`, 'action')
+    addBattleLog(`${attacker.name} used ${move.displayName}!`, 'action')
 
     if (!checkMoveAccuracy(move)) {
         if (attackerSide === 'player') {
             playSound('failAttack')
         }
 
-        addBattleLog('O golpe errou!', 'error')
+        addBattleLog('The move missed!', 'error')
         battleState.currentTurn = defenderSide
         handleTurnChange()
         return
@@ -1040,15 +1120,15 @@ const executeMove = (move) => {
     updateHpBar(defenderSide, previousHp)
 
     if (damageData.typeMultiplier > 1) {
-        addBattleLog('Foi super efetivo!', 'success')
+        addBattleLog('It was super effective!', 'success')
     } else if (damageData.typeMultiplier < 1) {
-        addBattleLog('Foi pouco efetivo!', 'info')
+        addBattleLog('It was not very effective!', 'info')
     }
 
-    addBattleLog(`${defender.name} perdeu ${damage} HP.`, 'action')
+    addBattleLog(`${defender.name} lost ${damage} HP.`, 'action')
 
     if (defender.currentHp === 0) {
-        addBattleLog(`${defender.name} foi derrotado!`, 'action')
+        addBattleLog(`${defender.name} was defeated!`, 'action')
         handlePokemonDefeated(defenderSide)
         return
     }
@@ -1059,7 +1139,7 @@ const executeMove = (move) => {
 
 const instantDefeatOpponent = () => {
     if (!battleState.started || battleState.finished || !battleState.opponent) {
-        addBattleLog('TEST KO só funciona durante a batalha.', 'error')
+        addBattleLog('TEST KO only works during battle.', 'error')
         return
     }
 
@@ -1069,9 +1149,97 @@ const instantDefeatOpponent = () => {
     const previousHp = battleState.opponent.currentHp
     battleState.opponent.currentHp = 0
     updateHpBar('opponent', previousHp)
-    addBattleLog(`TEST KO: golpe super efetivo em ${battleState.opponent.name}!`, 'success')
-    addBattleLog(`${battleState.opponent.name} foi derrotado!`, 'action')
+    addBattleLog(`TEST KO: super effective hit on ${battleState.opponent.name}!`, 'success')
+    addBattleLog(`${battleState.opponent.name} was defeated!`, 'action')
     handlePokemonDefeated('opponent')
+}
+
+const usePotion = () => {
+    const playerPokemon = battleState.player
+
+    if (!canUsePotion()) {
+        addBattleLog(getPotionUnavailableMessage(), 'error')
+        return
+    }
+
+    const previousHp = playerPokemon.currentHp
+    playerPokemon.currentHp = Math.min(playerPokemon.currentHp + 40, playerPokemon.maxHp)
+    journeyState.potionsUsed += 1
+
+    playSound('glug')
+    updateHpBar('player', previousHp)
+    flashPlayerPotionHeal()
+    updatePotionControl()
+    addBattleLog(`Potion healed ${playerPokemon.name} by ${playerPokemon.currentHp - previousHp} HP.`, 'success')
+}
+
+const canUsePotion = () => {
+    const playerPokemon = battleState.player
+
+    return battleState.started
+        && !battleState.finished
+        && battleState.currentTurn === 'player'
+        && !battleState.waitingForPlayerSwitch
+        && getRemainingPotions() > 0
+        && playerPokemon
+        && !playerPokemon.defeated
+        && playerPokemon.currentHp > 0
+        && playerPokemon.currentHp < playerPokemon.maxHp
+}
+
+const getPotionUnavailableMessage = () => {
+    const playerPokemon = battleState.player
+
+    if (getRemainingPotions() <= 0) {
+        return 'You have no potions left.'
+    }
+
+    if (!battleState.started || battleState.finished || !playerPokemon) {
+        return 'The potion can only be used during battle.'
+    }
+
+    if (battleState.currentTurn !== 'player') {
+        return 'Use the potion on your turn.'
+    }
+
+    if (battleState.waitingForPlayerSwitch || playerPokemon.defeated || playerPokemon.currentHp <= 0) {
+        return 'Choose a Pokemon before using the potion.'
+    }
+
+    if (playerPokemon.currentHp >= playerPokemon.maxHp) {
+        return `${playerPokemon.name} already has full HP.`
+    }
+
+    return 'You cannot use the potion right now.'
+}
+
+const getRemainingPotions = () => {
+    return Math.max(journeyState.maxPotions - journeyState.potionsUsed, 0)
+}
+
+const updatePotionControl = () => {
+    const potionControl = document.getElementById('potionControl')
+    const potionCount = document.getElementById('potionCount')
+
+    if (!potionControl || !potionCount) {
+        return
+    }
+
+    potionCount.textContent = `x${getRemainingPotions()}`
+    potionControl.disabled = !canUsePotion()
+    potionControl.classList.toggle('empty', getRemainingPotions() <= 0)
+}
+
+const flashPlayerPotionHeal = () => {
+    const playerElement = document.getElementById(pokemonSides.player.pokemonId)
+
+    if (!playerElement) {
+        return
+    }
+
+    playerElement.classList.remove('potionHealFlash')
+    void playerElement.offsetWidth
+    playerElement.classList.add('potionHealFlash')
 }
 
 const checkMoveAccuracy = (move) => {
@@ -1163,6 +1331,7 @@ const clearMoveButtons = () => {
 
 const handleTurnChange = () => {
     updateTurnIndicator()
+    updatePotionControl()
 
     if (battleState.waitingForPlayerSwitch) {
         clearMoveButtons()
@@ -1188,7 +1357,7 @@ const executeMachineTurn = () => {
     }
 
     battleState.machineThinking = true
-    addBattleLog(`${getOpponentTrainerName()} está pensando...`)
+    addBattleLog(`${getOpponentTrainerName()} is thinking...`)
 
     const delay = Math.floor(Math.random() * 401) + 800
 
@@ -1218,7 +1387,7 @@ const executeMachineTurn = () => {
 
 const setAiDifficulty = (difficulty, fromTrainer = false) => {
     if (journeyState.isJourneyMode && !fromTrainer) {
-        addBattleLog('Na jornada, a dificuldade é definida pelo treinador atual.')
+        addBattleLog('In journey mode, the current trainer sets the difficulty.')
         updateAiDifficultyButtons()
         return
     }
@@ -1229,7 +1398,7 @@ const setAiDifficulty = (difficulty, fromTrainer = false) => {
 
     battleState.aiDifficulty = difficulty
     updateAiDifficultyButtons()
-    addBattleLog(`Dificuldade da IA: ${aiDifficultyLabels[difficulty]}`)
+    addBattleLog(`AI difficulty: ${aiDifficultyLabels[difficulty]}`)
 }
 
 const getAiDifficulty = () => {
@@ -1247,33 +1416,33 @@ const updateAiDifficultyButtons = () => {
 
 const chooseMachineMove = (machinePokemon, playerPokemon) => {
     const difficulty = getAiDifficulty()
+    const turnMoves = getMachineTurnMoves(machinePokemon)
 
     if (difficulty === 'easy') {
         console.log('easy: random move')
-        return chooseRandomMove(machinePokemon)
+        return chooseRandomMove(turnMoves)
     }
 
     if (difficulty === 'hard') {
-        console.log('hard: best expected damage')
-        return chooseBestExpectedDamageMove(machinePokemon, playerPokemon)
+        console.log('hard: best expected damage from turn moves')
+        return chooseBestExpectedDamageMove(machinePokemon, playerPokemon, turnMoves)
     }
 
     if (Math.random() < 0.7) {
-        console.log('medium: best move')
-        return chooseBestExpectedDamageMove(machinePokemon, playerPokemon)
+        console.log('medium: best move from turn moves')
+        return chooseBestExpectedDamageMove(machinePokemon, playerPokemon, turnMoves)
     }
 
     console.log('medium: random move')
-    return chooseRandomMove(machinePokemon)
+    return chooseRandomMove(turnMoves)
 }
 
-const chooseRandomMove = (pokemon) => {
-    const moves = pokemon.moves && pokemon.moves.length ? pokemon.moves : [getFallbackMove()]
+const chooseRandomMove = (moves) => {
     return getRandomItem(moves) || getFallbackMove()
 }
 
-const chooseBestExpectedDamageMove = (attacker, defender) => {
-    const moves = getAvailableDamageMoves(attacker)
+const chooseBestExpectedDamageMove = (attacker, defender, turnMoves) => {
+    const moves = getAvailableDamageMoves(attacker, turnMoves)
 
     return moves.reduce((bestMove, move) => {
         const currentDamage = calculateExpectedDamage(attacker, defender, move)
@@ -1294,8 +1463,13 @@ const calculateExpectedDamage = (attacker, defender, move) => {
     return damageData.damage * (accuracy / 100)
 }
 
-const getAvailableDamageMoves = (pokemon) => {
-    const moves = pokemon.moves && pokemon.moves.length ? pokemon.moves : []
+const getAvailableDamageMoves = (pokemon, turnMoves = null) => {
+    const moves = turnMoves || (pokemon.moves && pokemon.moves.length ? pokemon.moves : [])
+
+    if (turnMoves) {
+        return moves.length ? moves : [getFallbackMove()]
+    }
+
     const damageMoves = moves.filter((move) => move.power > 0)
 
     return damageMoves.length ? damageMoves : [getFallbackMove()]
@@ -1416,7 +1590,7 @@ const handlePokemonDefeated = async (defeatedSide) => {
 
     if (defeatedSide === 'opponent') {
         if (!hasAlivePokemon(battleState.machineTeam)) {
-            addBattleLog(`Todos os Pokémon de ${getOpponentTrainerName()} foram derrotados!`, 'success')
+            addBattleLog(`All of ${getOpponentTrainerName()}'s Pokemon were defeated!`, 'success')
             finishThreeVsThreeBattle('player')
             return
         }
@@ -1430,7 +1604,7 @@ const handlePokemonDefeated = async (defeatedSide) => {
     }
 
     if (!hasAlivePokemon(battleState.playerTeam)) {
-        addBattleLog('Todos os seus Pokémon foram derrotados!', 'error')
+        addBattleLog('All of your Pokemon were defeated!', 'error')
         finishThreeVsThreeBattle('opponent')
         return
     }
@@ -1440,7 +1614,7 @@ const handlePokemonDefeated = async (defeatedSide) => {
     }
 
     battleState.waitingForPlayerSwitch = true
-    addBattleLog('Escolha seu próximo Pokémon.', 'info')
+    addBattleLog('Choose your next Pokemon.', 'info')
     showPlayerSwitchOptions()
 }
 
@@ -1457,12 +1631,14 @@ const showPlayerSwitchOptions = () => {
 
     if (!switchOptions) {
         renderTeamSummary()
+        updatePotionControl()
         return
     }
 
     switchOptions.classList.remove('active')
     switchOptions.innerHTML = ''
     renderTeamSummary()
+    updatePotionControl()
 }
 
 const hidePlayerSwitchOptions = () => {
@@ -1474,6 +1650,7 @@ const hidePlayerSwitchOptions = () => {
     }
 
     renderTeamSummary()
+    updatePotionControl()
 }
 
 const switchPlayerPokemon = async (index) => {
@@ -1492,7 +1669,7 @@ const switchPlayerPokemon = async (index) => {
     renderPokemon(pokemon, 'player')
     await wait(1900)
     updateHpBar('player')
-    addBattleLog(`Você enviou ${pokemon.name}!`)
+    addBattleLog(`You sent out ${pokemon.name}!`)
     resetTurnAfterSwitch()
 }
 
@@ -1512,7 +1689,7 @@ const switchMachinePokemon = async () => {
     renderPokemon(pokemon, 'opponent')
     await wait(1900)
     updateHpBar('opponent')
-    addBattleLog(`${getOpponentTrainerName()} enviou ${pokemon.name}!`)
+    addBattleLog(`${getOpponentTrainerName()} sent out ${pokemon.name}!`)
     resetTurnAfterSwitch()
 }
 
@@ -1597,7 +1774,7 @@ const finishThreeVsThreeBattle = (winner) => {
     const winnerSide = winner === 'player' ? 'player' : 'opponent'
     const trainerName = getOpponentTrainerName()
 
-    addBattleLog(winner === 'player' ? `Você venceu ${trainerName}!` : `${trainerName} venceu a batalha!`, winner === 'player' ? 'success' : 'error')
+    addBattleLog(winner === 'player' ? `You defeated ${trainerName}!` : `${trainerName} won the battle!`, winner === 'player' ? 'success' : 'error')
     finishBattle(winnerSide)
 }
 
@@ -1609,7 +1786,8 @@ const finishBattle = (winnerSide) => {
     battleState.machineThinking = false
     battleState.currentTurn = null
     updateTurnIndicator()
-    addBattleLog(`${winner.name} venceu a batalha!`, winnerSide === 'player' ? 'success' : 'error')
+    updatePotionControl()
+    addBattleLog(`${winner.name} won the battle!`, winnerSide === 'player' ? 'success' : 'error')
     const isFinalJourneyVictory = isLastJourneyTrainerBattle(winnerSide)
 
     if (winnerSide === 'opponent') {
@@ -1695,7 +1873,7 @@ const handleJourneyDefeat = () => {
     journeyState.result = 'defeat'
 
     if (trainer) {
-        addBattleLog(`Você perdeu para ${trainer.name}.`, 'error')
+        addBattleLog(`You lost to ${trainer.name}.`, 'error')
     }
 
     setBattleButton(hasContinuesAvailable() ? 'Continue' : 'New Game', false, false)
@@ -1735,16 +1913,18 @@ const goToNextTrainer = () => {
 const retryCurrentTrainer = () => {
     resetBattleForJourneySetup()
     showJourneyContinue()
-    showMessage(`Continue: enfrente ${getOpponentTrainerName()} novamente.`, 'info')
+    showMessage(`Continue: face ${getOpponentTrainerName()} again.`, 'info')
 }
 
 const restartJourney = () => {
     journeyState.currentTrainerIndex = 0
     journeyState.completedTrainers = []
     journeyState.continueUsed = 0
+    journeyState.potionsUsed = 0
     updateContinueCounter()
+    updatePotionControl()
     resetBattleForJourneySetup()
-    showMessage('New Game: a jornada voltou para Mariner.', 'info')
+    showMessage('New Game: the journey returned to Mariner.', 'info')
 }
 
 const animateDefeat = (loserSide, resultMessage) => {
@@ -1859,6 +2039,7 @@ const getJourneyProgressMarkup = () => {
     }
 
     return `
+        <p class="journeyProgressTitle">Next challenge:</p>
         <div class="journeyFaceRow">
             ${journeyState.trainers.map((trainer) => {
                 const defeatedClass = defeatedIndexes.has(trainer.index) ? ' defeated' : ''
@@ -1925,10 +2106,10 @@ const getFirstTurnMessage = () => {
     const opponentPokemon = battleState[getOpponentSide(battleState.currentTurn)]
 
     if (currentPokemon.stats.speed === opponentPokemon.stats.speed) {
-        return `${currentPokemon.name} começa por sorte no empate de velocidade!`
+        return `${currentPokemon.name} starts by luck after a speed tie!`
     }
 
-    return `${currentPokemon.name} começa por ser mais rápido!`
+    return `${currentPokemon.name} starts for being faster!`
 }
 
 const getOpponentSide = (side) => {
@@ -1953,7 +2134,9 @@ const resetFullBattle = () => {
     journeyState.currentTrainerIndex = 0
     journeyState.completedTrainers = []
     journeyState.continueUsed = 0
+    journeyState.potionsUsed = 0
     updateContinueCounter()
+    updatePotionControl()
     resetBattleForJourneySetup()
 }
 
@@ -2058,12 +2241,12 @@ const showJourneyContinue = () => {
     }
 
     textScreen.innerHTML = `
-        <p class="galeIntroText">Let's continue the battle!</p>
+        <p class="galeIntroText continueIntroText">Let's continue the journey?</p>
         <div class="ashIntroWrap">
             <img src="../../assets/img/ash-cry.png" class="screenText trainerGale" alt="Ash returns to continue the Pokemon challenge">
             <span class="desktopAshCue" aria-hidden="true">
                 <img src="../../assets/img/pokeballPixel.png" class="desktopAshBall" alt="">
-                <span class="desktopAshArrow">→</span>
+                <span class="desktopAshArrow">>></span>
             </span>
         </div>
     `
@@ -2163,6 +2346,7 @@ const setBattleMenuMode = (mode) => {
     const slots = document.getElementById('playerTeamSlots')
     const randomButton = document.querySelector('.randomTeamButton')
     const teamSummary = document.getElementById('teamSummary')
+    const potionControl = document.getElementById('potionControl')
     const battlePanel = document.querySelector('.battlePanel')
     const isSetup = mode === 'setup'
 
@@ -2186,6 +2370,11 @@ const setBattleMenuMode = (mode) => {
     if (teamSummary) {
         renderTeamSummary()
         teamSummary.style.display = isSetup ? 'none' : 'flex'
+    }
+
+    if (potionControl) {
+        potionControl.style.display = isSetup ? 'none' : 'inline-flex'
+        updatePotionControl()
     }
 
     if (battlePanel) {
@@ -2383,6 +2572,7 @@ window.addEventListener('load', () => {
     updateAiDifficultyButtons()
     updateMuteButton()
     updateContinueCounter()
+    updatePotionControl()
     updateStartButton()
     playSound('start')
 })
