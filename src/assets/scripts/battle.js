@@ -12,132 +12,50 @@ const battleState = {
     machineThinking: false,
     waitingForPlayerSwitch: false,
     aiDifficulty: 'medium',
-    muted: false,
     resetToken: 0
 }
 
-const aiDifficultyLabels = {
-    easy: 'Easy',
-    medium: 'Medium',
-    hard: 'Hard'
-}
-
-const teamDifficultyProfiles = {
-    easy: {
-        label: 'weaker',
-        firstRange: [0.55, 0.9],
-        secondRange: [0.45, 1],
-        targetMultiplier: 0.75
-    },
-    medium: {
-        label: 'balanced',
-        firstRange: [0.85, 1.15],
-        secondRange: [0.75, 1.25],
-        targetMultiplier: 1
-    },
-    hard: {
-        label: 'stronger',
-        firstRange: [1.1, 1.55],
-        secondRange: [1, 1.75],
-        targetMultiplier: 1.35
-    }
-}
+const battleConfig = window.BATTLE_CONFIG
+const cloneStaticData = (data) => JSON.parse(JSON.stringify(data))
+const aiDifficultyLabels = battleConfig.aiDifficultyLabels
+const teamDifficultyProfiles = battleConfig.teamDifficultyProfiles
+const {
+    checkMoveAccuracy,
+    calculateMoveDamage,
+    getTypeMultiplier,
+    chooseFirstTurn,
+    getOpponentSide
+} = window.BATTLE_LOGIC
+const {
+    addBattleLog,
+    clearBattleLog,
+    clearMessage,
+    showMessage
+} = window.BATTLE_RENDER
+const {
+    getPokemon,
+    getPokemonMoves,
+    getFallbackMove,
+    normalizePokemon,
+    calculatePokemonPower
+} = window.POKEMON_API
 
 const journeyState = {
-    isJourneyMode: true,
+    isJourneyMode: battleConfig.journey.isJourneyMode,
     currentTrainerIndex: 0,
     completedTrainers: [],
     continueUsed: 0,
-    maxContinues: 2,
+    maxContinues: battleConfig.journey.maxContinues,
     potionsUsed: 0,
-    maxPotions: 3,
+    maxPotions: battleConfig.journey.maxPotions,
     phase: 'setup',
     result: null,
-    trainers: [
-        {
-            name: 'Mariner',
-            difficulty: 'easy',
-            theme: 'water',
-            challengeText: 'The waves always reveal who is ready to fight.',
-            defeatText: 'You sailed better than I expected.',
-            image: '../../assets/img/trainer_mariner.png',
-            face: '../../assets/img/face-mariner.png',
-            index: 0
-        },
-        {
-            name: 'Uiryhs',
-            difficulty: 'easy',
-            theme: 'storm',
-            challengeText: 'The Dragon and my old master are leading the way. I want to see if you can keep up.',
-            defeatText: 'You endured the storm.',
-            image: '../../assets/img/trainer_gale.png',
-            face: '../../assets/img/face-gale.png',
-            index: 1
-        },
-        {
-            name: 'Orochi',
-            difficulty: 'medium',
-            theme: 'shadow',
-            challengeText: 'The fear of death is a human weakness... Let me show you the true value of eternal power.',
-            defeatText: 'You passed my test.',
-            image: '../../assets/img/maru.png',
-            face: '../../assets/img/face-maru.png',
-            index: 2
-        },
-        {
-            name: 'Fisherman',
-            difficulty: 'medium',
-            theme: 'river',
-            challengeText: 'Fishing requires patience. So does battle.',
-            defeatText: 'You reeled in a great victory.',
-            image: '../../assets/img/fisherman.png',
-            face: '../../assets/img/face-fisherman.png',
-            index: 3
-        },
-        {
-            name: 'Sword Lord',
-            difficulty: 'hard',
-            theme: 'blade',
-            challengeText: 'A blade recognizes only those who fight with honor.',
-            defeatText: 'Your courage cut through even the silence.',
-            image: '../../assets/img/swordlord.png',
-            face: '../../assets/img/face-lordsword.png',
-            index: 4
-        },
-        {
-            name: 'Old Gary',
-            difficulty: 'hard',
-            theme: 'champion',
-            challengeText: 'Hello old friend, you have come a long way. Now prove you deserve the top.',
-            defeatText: 'Hmph... not bad. Maybe you really are a champion.',
-            image: '../../assets/img/ond-gary.png',
-            face: '../../assets/img/face-gary.png',
-            index: 5
-        }
-    ]
+    trainers: cloneStaticData(battleConfig.journey.trainers)
 }
 
-const pokemonApiCache = {}
-const moveDetailsCache = {}
 const pokemonCandidateCache = {}
-const teamSize = 3
-const maxMachinePokemonId = 251
-
-const sounds = {
-    start: new Audio('../../assets/sounds/start.mp3'),
-    choose: new Audio('../../assets/sounds/choose.mp3'),
-    attack: new Audio('../../assets/sounds/choose_atack.mp3'),
-    failAttack: new Audio('../../assets/sounds/fail-atack.mp3'),
-    glug: new Audio('../../assets/sounds/glug.mp3'),
-    cry: new Audio('../../assets/sounds/cry.mp3'),
-    deathPok: new Audio('../../assets/sounds/death-pok.mp3'),
-    pokeballOpen: new Audio('../../assets/sounds/throw-pokeball.mp3'),
-    songBattle: new Audio('../../assets/sounds/song-battle.mp3'),
-    finishGame: new Audio('../../assets/sounds/finish-game-congrats.mp3'),
-    xEnter: new Audio('../../assets/sounds/x-enter.mp3'),
-    lose: new Audio('../../assets/sounds/lost-battle.mp3'),
-    win: new Audio('../../assets/sounds/victory.mp3')
-}
+const teamSize = battleConfig.teamSize
+const maxMachinePokemonId = battleConfig.maxMachinePokemonId
 
 const renderTimers = {
     player: [],
@@ -308,41 +226,52 @@ const removePokemonFromPlayerTeam = (index) => {
 }
 
 const renderPlayerTeamSlots = () => {
-    const slots = document.getElementById('playerTeamSlots')
-
-    if (!slots) {
-        return
-    }
-
-    slots.innerHTML = getTeamSlotIndexes().map((index) => {
-        const pokemon = battleState.playerTeam[index]
-
-        if (!pokemon) {
-            return `
-                <div class="teamSlot teamSlotEmpty">
-                    <span>Slot ${index + 1}</span>
-                    <div class="teamSlotForm">
-                        <input class="teamSlotInput" id="${getTeamSlotInputId(index)}" type="text" placeholder="Pok name or number" onkeydown="handleTeamSlotKey(event, ${index})">
-                        <button class="teamSlotAdd" onclick="search(${index})">ADD</button>
-                    </div>
-                </div>
-            `
-        }
-
-        return `
-            <div class="teamSlot">
-                <span>${pokemon.name}${pokemon.ready ? '' : ' <small class="teamSlotLoading">loading...</small>'}</span>
-                <button class="teamSlotRemove" onclick="removePokemonFromPlayerTeam(${index})">X</button>
-            </div>
-        `
-    }).join('')
+    window.BATTLE_RENDER.renderPlayerTeamSlots({
+        team: battleState.playerTeam,
+        slotIndexes: getTeamSlotIndexes()
+    })
 }
 
 const updateStartButton = () => {
-    const button = document.querySelector('.toBattle')
+    window.BATTLE_RENDER.updateStartButton({
+        isBattleStarted: battleState.started,
+        disabled: !isPlayerTeamComplete() || battleState.selectingMachine
+    })
+}
 
-    if (button && !battleState.started) {
-        button.disabled = !isPlayerTeamComplete() || battleState.selectingMachine
+const chooseRandomPokemonForSlot = async (slotIndex) => {
+    if (battleState.started || battleState.playerTeam[slotIndex] || battleState.selectingMachine) {
+        return
+    }
+
+    const resetToken = battleState.resetToken
+
+    try {
+        setSearchControls(true)
+        clearMessage()
+
+        const pokemonId = getRandomAvailablePokemonId()
+        const data = await getPokemon(pokemonId.toString())
+        const pokemon = normalizePokemon(data, [getFallbackMove()], false)
+
+        if (resetToken !== battleState.resetToken) {
+            setSearchControls(false)
+            return
+        }
+
+        battleState.playerTeam[slotIndex] = pokemon
+        playSound('choose')
+        renderPlayerTeamSlots()
+        renderTeamSummary()
+        updateStartButton()
+        addBattleLog(`${pokemon.name} joined slot ${slotIndex + 1}!`, 'success')
+        setSearchControls(false)
+
+        loadPlayerPokemonMoves(pokemon, data.moves, slotIndex, resetToken)
+    } catch (err) {
+        showMessage('Could not choose a random Pokemon!', 'error')
+        console.log(err)
+        setSearchControls(false)
     }
 }
 
@@ -428,6 +357,17 @@ const getUniqueRandomPokemonIds = (amount) => {
     return [...ids]
 }
 
+const getRandomAvailablePokemonId = () => {
+    const usedIds = new Set(battleState.playerTeam.filter(Boolean).map((pokemon) => pokemon.id))
+    let pokemonId = getRandomPokemonId()
+
+    while (usedIds.has(pokemonId)) {
+        pokemonId = getRandomPokemonId()
+    }
+
+    return pokemonId
+}
+
 const loadPokemon = async (side) => {
     const settings = pokemonSides[side]
     const input = document.getElementById(settings.inputId)
@@ -468,109 +408,10 @@ const loadPokemon = async (side) => {
         battleState.selectingMachine = false
         resetBattle()
         clearSideTimers(side)
-        document.getElementById(settings.containerId).innerHTML = ''
+        window.BATTLE_RENDER.clearContainer(settings.containerId)
         showMessage('Pokemon not found!', 'error')
         setSearchControls(false)
         console.log(err)
-    }
-}
-
-const getPokemon = async (pokName) => {
-    const pokemonKey = pokName.toString().toLowerCase()
-
-    if (pokemonApiCache[pokemonKey]) {
-        return pokemonApiCache[pokemonKey]
-    }
-
-    const url = `https://pokeapi.co/api/v2/pokemon/${pokemonKey}/`
-    const pokemonRequest = fetch(url)
-        .then(async (response) => {
-            if (!response.ok) {
-                throw new Error('Pokemon not found')
-            }
-
-            const data = await response.json()
-            pokemonApiCache[pokemonKey] = data
-            pokemonApiCache[data.id.toString()] = data
-            pokemonApiCache[data.name.toLowerCase()] = data
-
-            return data
-        })
-        .catch((err) => {
-            delete pokemonApiCache[pokemonKey]
-            throw err
-        })
-
-    pokemonApiCache[pokemonKey] = pokemonRequest
-
-    return pokemonRequest
-}
-
-const getPokemonMoves = async (pokemonMoves) => {
-    const movePool = []
-    const batchSize = 12
-    const maxMoves = 24
-    const shuffledMoves = shuffleList(pokemonMoves)
-
-    for (let i = 0; i < shuffledMoves.length && movePool.length < maxMoves; i += batchSize) {
-        const moveBatch = shuffledMoves.slice(i, i + batchSize)
-        const moveRequests = moveBatch.map((item) => getMoveDetails(item.move.url))
-        const results = await Promise.allSettled(moveRequests)
-
-        results.forEach((result) => {
-            if (result.status === 'fulfilled' && result.value) {
-                movePool.push(result.value)
-            }
-        })
-    }
-
-    return movePool.length ? movePool : [getFallbackMove()]
-}
-
-const getMoveDetails = async (url) => {
-    if (moveDetailsCache[url]) {
-        return moveDetailsCache[url]
-    }
-
-    const moveRequest = fetch(url)
-        .then(async (response) => {
-            if (!response.ok) {
-                return null
-            }
-
-            const data = await response.json()
-
-            return {
-                name: data.name,
-                displayName: formatMoveName(data.name),
-                type: data.type.name,
-                displayType: capitalize(data.type.name),
-                power: data.power || 0,
-                accuracy: data.accuracy ?? 100,
-                damageClass: data.damage_class ? data.damage_class.name : '',
-                pp: data.pp
-            }
-        })
-        .catch((err) => {
-            console.log(err)
-            return null
-        })
-
-    moveDetailsCache[url] = moveRequest
-
-    return moveRequest
-}
-
-const getFallbackMove = () => {
-    return {
-        name: 'tackle',
-        displayName: 'Tackle',
-        type: 'normal',
-        displayType: 'Normal',
-        power: 40,
-        accuracy: 100,
-        damageClass: 'physical',
-        pp: null
     }
 }
 
@@ -585,15 +426,7 @@ const getRandomMoves = (moves, amount) => {
 }
 
 const getPlayerTurnMoves = (pokemon) => {
-    const moves = pokemon.moves && pokemon.moves.length ? pokemon.moves : [getFallbackMove()]
-    return shuffleList(moves).slice(0, 4)
-}
-
-const getMachineTurnMoves = (pokemon) => {
-    const moves = pokemon.moves && pokemon.moves.length ? pokemon.moves : [getFallbackMove()]
-    const selectedMoves = shuffleList(moves).slice(0, 4)
-
-    return selectedMoves.length ? selectedMoves : [getFallbackMove()]
+    return window.BATTLE_LOGIC.getPlayerTurnMoves(pokemon, getFallbackMove())
 }
 
 const shuffleList = (list) => {
@@ -604,100 +437,28 @@ const getRandomItem = (list) => {
     return list[Math.floor(Math.random() * list.length)]
 }
 
-const normalizePokemon = (data, moves, ready = true) => {
-    const stats = normalizeStats(data.stats)
-
-    return {
-        id: data.id,
-        name: capitalize(data.name),
-        weightKg: (data.weight / 2.205).toFixed(0),
-        force: calculateBattlePower(stats),
-        maxHp: stats.hp,
-        currentHp: stats.hp,
-        type: data.types[0].type.name,
-        sprites: {
-            front: data.sprites.front_default,
-            back: data.sprites.back_default || data.sprites.front_default
-        },
-        moves,
-        stats,
-        ready
-    }
-}
-
 const renderPokemon = (pokemon, side) => {
     const settings = pokemonSides[side]
-    const container = document.getElementById(settings.containerId)
 
     clearSideTimers(side)
-    document.querySelector('#powerId').style.color = 'rgb(121, 255, 121)'
-    document.querySelector('#textScreen').style.display = 'none'
-    document.querySelector('#ball').style.display = 'none'
 
-    settings.entryFrames.forEach((frame) => {
-        scheduleRender(side, frame.delay, () => {
-            container.innerHTML = `<img class='${frame.className}' src='${getBallImage(frame.image)}'>`
-        })
+    window.BATTLE_RENDER.renderPokemon({
+        pokemon,
+        settings,
+        registerTimer: (timer) => {
+            renderTimers[side].push(timer)
+        },
+        onReady: () => {
+            pokemon.ready = true
+        }
     })
-
-    scheduleRender(side, 1800, () => {
-        container.innerHTML = getPokemonMarkup(pokemon, settings)
-        pokemon.ready = true
-    })
-}
-
-const getPokemonMarkup = (pokemon, settings) => {
-    return `
-        <div id='${settings.pokemonId}' class='pokemonBattleCard' ${settings.dataNameAttr}='${pokemon.name}' ${settings.dataForceAttr}='${pokemon.force}' ${settings.dataTypeAttr}='${pokemon.type}'>
-            <div class='${settings.dataClass}'>
-                <h2><span class='turnArrow'></span>${pokemon.name}</h2>
-                <div class='lifeBar'><div class='${settings.lifeClass}'></div></div>
-                <p class='hpText'>HP: ${pokemon.currentHp}/${pokemon.maxHp}</p>
-                <p>No: ${pokemon.id}</p>
-                <p>Type: ${pokemon.type}</p>
-            </div>
-            <img class='${settings.imageClass}' src='${pokemon.sprites[settings.spriteKey]}'>
-        </div>
-    `
-}
-
-const normalizeStats = (apiStats) => {
-    const stats = apiStats.reduce((acc, item) => {
-        acc[item.stat.name] = item.base_stat
-        return acc
-    }, {})
-
-    return {
-        hp: stats.hp || 0,
-        attack: stats.attack || 0,
-        defense: stats.defense || 0,
-        specialAttack: stats['special-attack'] || 0,
-        specialDefense: stats['special-defense'] || 0,
-        speed: stats.speed || 0
-    }
-}
-
-const calculateBattlePower = (stats) => {
-    return stats.hp
-        + stats.attack
-        + stats.defense
-        + stats.specialAttack
-        + stats.specialDefense
-        + stats.speed
-}
-
-const calculatePokemonPower = (pokemon) => {
-    return pokemon.stats.hp
-        + pokemon.stats.attack
-        + pokemon.stats.defense
-        + pokemon.stats.speed
 }
 
 const selectMachinePokemon = async (playerPokemon) => {
     battleState.selectingMachine = true
     battleState.opponent = null
     clearSideTimers('opponent')
-    document.getElementById(pokemonSides.opponent.containerId).innerHTML = ''
+    window.BATTLE_RENDER.clearContainer(pokemonSides.opponent.containerId)
     addBattleLog('The machine is choosing a balanced opponent...')
     addBattleLog('Analyzing candidates...')
 
@@ -1218,86 +979,23 @@ const getRemainingPotions = () => {
 }
 
 const updatePotionControl = () => {
-    const potionControl = document.getElementById('potionControl')
-    const potionCount = document.getElementById('potionCount')
+    const remainingPotions = getRemainingPotions()
 
-    if (!potionControl || !potionCount) {
-        return
-    }
-
-    potionCount.textContent = `x${getRemainingPotions()}`
-    potionControl.disabled = !canUsePotion()
-    potionControl.classList.toggle('empty', getRemainingPotions() <= 0)
+    window.BATTLE_RENDER.updatePotionControl({
+        count: remainingPotions,
+        disabled: !canUsePotion(),
+        empty: remainingPotions <= 0
+    })
 }
 
 const flashPlayerPotionHeal = () => {
-    const playerElement = document.getElementById(pokemonSides.player.pokemonId)
-
-    if (!playerElement) {
-        return
-    }
-
-    playerElement.classList.remove('potionHealFlash')
-    void playerElement.offsetWidth
-    playerElement.classList.add('potionHealFlash')
-}
-
-const checkMoveAccuracy = (move) => {
-    const accuracy = move.accuracy ?? 100
-
-    if (accuracy >= 100) {
-        return true
-    }
-
-    return Math.random() * 100 < accuracy
-}
-
-const calculateMoveDamage = (attacker, defender, move) => {
-    const stabMultiplier = move.type === attacker.type ? 1.5 : 1
-    const typeMultiplier = getTypeMultiplier(move.type, defender.type)
-    const movePower = move.power || 0
-    const baseDamage = (movePower / 3) + (attacker.stats.attack / 3) - (defender.stats.defense / 4)
-    const damage = Math.max(Math.floor(baseDamage * stabMultiplier * typeMultiplier), 1)
-
-    return {
-        damage,
-        typeMultiplier,
-        stabMultiplier
-    }
-}
-
-const getTypeMultiplier = (moveType, defenderType) => {
-    const typeChart = {
-        normal: { rock: 0.5, ghost: 0 },
-        fire: { grass: 2, ice: 2, bug: 2, water: 0.5, rock: 0.5, fire: 0.5 },
-        water: { fire: 2, ground: 2, rock: 2, water: 0.5, grass: 0.5 },
-        grass: { water: 2, ground: 2, rock: 2, fire: 0.5, grass: 0.5, bug: 0.5 },
-        electric: { water: 2, flying: 2, electric: 0.5, grass: 0.5, ground: 0 },
-        ice: { grass: 2, ground: 2, flying: 2, dragon: 2, fire: 0.5, water: 0.5, ice: 0.5 },
-        fighting: { normal: 2, ice: 2, rock: 2, dark: 2, fairy: 0.5, psychic: 0.5, ghost: 0 },
-        poison: { grass: 2, fairy: 2, poison: 0.5, ground: 0.5, rock: 0.5 },
-        ground: { fire: 2, electric: 2, poison: 2, rock: 2, grass: 0.5, bug: 0.5, flying: 0 },
-        flying: { grass: 2, fighting: 2, bug: 2, electric: 0.5, rock: 0.5 },
-        psychic: { fighting: 2, poison: 2, psychic: 0.5, dark: 0 },
-        bug: { grass: 2, psychic: 2, dark: 2, fire: 0.5, fighting: 0.5, flying: 0.5, ghost: 0.5 },
-        rock: { fire: 2, ice: 2, flying: 2, bug: 2, fighting: 0.5, ground: 0.5 },
-        ghost: { psychic: 2, ghost: 2, dark: 0.5, normal: 0 },
-        dragon: { dragon: 2, steel: 0.5, fairy: 0 },
-        dark: { psychic: 2, ghost: 2, fighting: 0.5, dark: 0.5, fairy: 0.5 },
-        steel: { ice: 2, rock: 2, fairy: 2, fire: 0.5, water: 0.5, electric: 0.5 },
-        fairy: { fighting: 2, dragon: 2, dark: 2, fire: 0.5, poison: 0.5, steel: 0.5 }
-    }
-
-    return typeChart[moveType] && typeChart[moveType][defenderType] !== undefined
-        ? typeChart[moveType][defenderType]
-        : 1
+    window.BATTLE_RENDER.flashPokemonHeal(pokemonSides.player.pokemonId)
 }
 
 const renderMoveButtons = () => {
-    const moveButtons = document.getElementById('moveButtons')
     const currentPokemon = battleState[battleState.currentTurn]
 
-    if (!moveButtons || !currentPokemon || battleState.finished || isMachineTurn()) {
+    if (!currentPokemon || battleState.finished || isMachineTurn()) {
         clearMoveButtons()
         return
     }
@@ -1306,27 +1004,17 @@ const renderMoveButtons = () => {
 
     const turnMoves = getPlayerTurnMoves(currentPokemon)
 
-    moveButtons.innerHTML = turnMoves.map((move, index) => `
-        <button class="moveButton" data-move-index="${index}">
-            ${move.displayName}
-        </button>
-    `).join('')
-
-    moveButtons.querySelectorAll('.moveButton').forEach((button) => {
-        button.addEventListener('click', () => {
-            const moveIndex = parseInt(button.dataset.moveIndex)
+    window.BATTLE_RENDER.renderMoveButtons({
+        moves: turnMoves,
+        onMoveClick: (move) => {
             playSound('attack')
-            executeMove(turnMoves[moveIndex])
-        })
+            executeMove(move)
+        }
     })
 }
 
 const clearMoveButtons = () => {
-    const moveButtons = document.getElementById('moveButtons')
-
-    if (moveButtons) {
-        moveButtons.innerHTML = ''
-    }
+    window.BATTLE_RENDER.clearMoveButtons()
 }
 
 const handleTurnChange = () => {
@@ -1406,170 +1094,49 @@ const getAiDifficulty = () => {
 }
 
 const updateAiDifficultyButtons = () => {
-    const difficulty = getAiDifficulty()
-    const buttons = document.querySelectorAll('.aiDifficultyButton')
-
-    buttons.forEach((button) => {
-        button.classList.toggle('active', button.dataset.aiDifficulty === difficulty)
-    })
+    window.BATTLE_RENDER.updateAiDifficultyButtons(getAiDifficulty())
 }
 
 const chooseMachineMove = (machinePokemon, playerPokemon) => {
-    const difficulty = getAiDifficulty()
-    const turnMoves = getMachineTurnMoves(machinePokemon)
-
-    if (difficulty === 'easy') {
-        console.log('easy: random move')
-        return chooseRandomMove(turnMoves)
-    }
-
-    if (difficulty === 'hard') {
-        console.log('hard: best expected damage from turn moves')
-        return chooseBestExpectedDamageMove(machinePokemon, playerPokemon, turnMoves)
-    }
-
-    if (Math.random() < 0.7) {
-        console.log('medium: best move from turn moves')
-        return chooseBestExpectedDamageMove(machinePokemon, playerPokemon, turnMoves)
-    }
-
-    console.log('medium: random move')
-    return chooseRandomMove(turnMoves)
-}
-
-const chooseRandomMove = (moves) => {
-    return getRandomItem(moves) || getFallbackMove()
-}
-
-const chooseBestExpectedDamageMove = (attacker, defender, turnMoves) => {
-    const moves = getAvailableDamageMoves(attacker, turnMoves)
-
-    return moves.reduce((bestMove, move) => {
-        const currentDamage = calculateExpectedDamage(attacker, defender, move)
-        const bestDamage = calculateExpectedDamage(attacker, defender, bestMove)
-
-        return currentDamage > bestDamage ? move : bestMove
-    }, moves[0])
-}
-
-const calculateExpectedDamage = (attacker, defender, move) => {
-    if (!move.power) {
-        return 0
-    }
-
-    const accuracy = move.accuracy ?? 100
-    const damageData = calculateMoveDamage(attacker, defender, move)
-
-    return damageData.damage * (accuracy / 100)
-}
-
-const getAvailableDamageMoves = (pokemon, turnMoves = null) => {
-    const moves = turnMoves || (pokemon.moves && pokemon.moves.length ? pokemon.moves : [])
-
-    if (turnMoves) {
-        return moves.length ? moves : [getFallbackMove()]
-    }
-
-    const damageMoves = moves.filter((move) => move.power > 0)
-
-    return damageMoves.length ? damageMoves : [getFallbackMove()]
+    return window.BATTLE_LOGIC.chooseMachineMove(machinePokemon, playerPokemon, getAiDifficulty(), getFallbackMove())
 }
 
 const showMachineMoveBubble = (pokemon, move) => {
-    const bubble = document.getElementById('machineMoveBubble')
-
-    if (!bubble) {
-        return
-    }
-
-    bubble.textContent = `${pokemon.name} usou ${move.displayName}!`
-    bubble.classList.add('active')
+    window.BATTLE_RENDER.showMachineMoveBubble({
+        pokemonName: pokemon.name,
+        moveName: move.displayName
+    })
 }
 
 const hideMachineMoveBubble = () => {
-    const bubble = document.getElementById('machineMoveBubble')
-
-    if (!bubble) {
-        return
-    }
-
-    bubble.classList.remove('active')
-    bubble.textContent = ''
+    window.BATTLE_RENDER.hideMachineMoveBubble()
 }
 
 const updateHpBar = (side, fromHp = null) => {
     const pokemon = battleState[side]
     const settings = pokemonSides[side]
-    const pokemonElement = document.getElementById(settings.pokemonId)
-    const lifeBar = pokemonElement && pokemonElement.querySelector(`.${settings.lifeClass}`)
-    const hpText = pokemonElement && pokemonElement.querySelector('.hpText')
 
-    if (!pokemon || !pokemonElement || !lifeBar || !hpText) {
+    if (!pokemon || !settings) {
         return
     }
 
-    const startHp = fromHp === null ? pokemon.currentHp : fromHp
-    const endHp = pokemon.currentHp
-
-    animateHpBar(pokemon, lifeBar, hpText, startHp, endHp)
-}
-
-const animateHpBar = (pokemon, lifeBar, hpText, startHp, endHp) => {
-    const difference = Math.abs(startHp - endHp)
-    const steps = Math.max(Math.min(difference, 24), 1)
-    let currentStep = 0
-
-    const renderHpStep = () => {
-        const progress = currentStep / steps
-        const currentHp = Math.round(startHp + (endHp - startHp) * progress)
-        const hpPercent = Math.max((currentHp / pokemon.maxHp) * 100, 0)
-
-        lifeBar.style.width = `${hpPercent}%`
-        hpText.textContent = `HP: ${currentHp}/${pokemon.maxHp}`
-
-        if (currentStep >= steps) {
-            return
-        }
-
-        currentStep += 1
-        const timer = setTimeout(renderHpStep, 30)
-        battleTimers.push(timer)
-    }
-
-    renderHpStep()
-}
-
-const updateTurnIndicator = () => {
-    Object.keys(pokemonSides).forEach((side) => {
-        const pokemonElement = document.getElementById(pokemonSides[side].pokemonId)
-
-        if (pokemonElement) {
-            pokemonElement.classList.toggle('activeTurn', side === battleState.currentTurn && !battleState.finished)
+    window.BATTLE_RENDER.updateHpBar({
+        pokemon,
+        pokemonId: settings.pokemonId,
+        lifeClass: settings.lifeClass,
+        fromHp,
+        registerTimer: (timer) => {
+            battleTimers.push(timer)
         }
     })
 }
 
-const addBattleLog = (message, type = 'default') => {
-    const battleLog = document.getElementById('battleLog')
-
-    if (!battleLog) {
-        return
-    }
-
-    battleLog.innerHTML += `<p class="battleLogMessage ${getBattleLogClass(type)}">${message}</p>`
-    battleLog.scrollTop = battleLog.scrollHeight
-}
-
-const getBattleLogClass = (type) => {
-    const classes = {
-        error: 'battleLogError',
-        action: 'battleLogError',
-        success: 'battleLogSuccess',
-        info: 'battleLogInfo',
-        default: 'battleLogInfo'
-    }
-
-    return classes[type] || classes.default
+const updateTurnIndicator = () => {
+    window.BATTLE_RENDER.updateTurnIndicator({
+        sides: pokemonSides,
+        currentTurn: battleState.currentTurn,
+        finished: battleState.finished
+    })
 }
 
 const handlePokemonDefeated = async (defeatedSide) => {
@@ -1627,28 +1194,18 @@ const getNextAlivePokemon = (team) => {
 }
 
 const showPlayerSwitchOptions = () => {
-    const switchOptions = document.getElementById('switchOptions')
-
-    if (!switchOptions) {
+    if (!window.BATTLE_RENDER.clearSwitchOptions()) {
         renderTeamSummary()
         updatePotionControl()
         return
     }
 
-    switchOptions.classList.remove('active')
-    switchOptions.innerHTML = ''
     renderTeamSummary()
     updatePotionControl()
 }
 
 const hidePlayerSwitchOptions = () => {
-    const switchOptions = document.getElementById('switchOptions')
-
-    if (switchOptions) {
-        switchOptions.classList.remove('active')
-        switchOptions.innerHTML = ''
-    }
-
+    window.BATTLE_RENDER.clearSwitchOptions()
     renderTeamSummary()
     updatePotionControl()
 }
@@ -1709,36 +1266,23 @@ const playPokemonDefeatSequence = async (side, pokemonName) => {
 
 const animatePokemonFaint = (side) => {
     const settings = pokemonSides[side]
-    const container = document.getElementById(settings.containerId)
 
-    if (!container) {
-        return
-    }
-
-    const smokeImages = [1, 2, 3]
-
-    smokeImages.forEach((image, index) => {
-        const timer = setTimeout(() => {
-            container.innerHTML = `<img class='${settings.smokeClass}' src='../../assets/img/smoke${image}.png'>`
-        }, index * 400)
-
-        battleTimers.push(timer)
+    window.BATTLE_RENDER.animatePokemonFaint({
+        containerId: settings.containerId,
+        smokeClass: settings.smokeClass,
+        registerTimer: (timer) => {
+            battleTimers.push(timer)
+        }
     })
 }
 
 const showPokemonDefeatedMessage = (side, pokemonName) => {
     const settings = pokemonSides[side]
-    const container = document.getElementById(settings.containerId)
 
-    if (!container) {
-        return
-    }
-
-    container.innerHTML = `
-        <div class="defeatedMessage">
-            ${pokemonName} fainted!
-        </div>
-    `
+    window.BATTLE_RENDER.showPokemonDefeatedMessage({
+        containerId: settings.containerId,
+        pokemonName
+    })
 }
 
 const resetTurnAfterSwitch = () => {
@@ -1748,26 +1292,11 @@ const resetTurnAfterSwitch = () => {
 }
 
 const updateTeamDots = (side) => {
-    const dotsElement = document.getElementById(side === 'player' ? 'playerTeamDots' : 'machineTeamDots')
-    const team = side === 'player' ? battleState.playerTeam : battleState.machineTeam
-
-    if (!dotsElement) {
-        return
-    }
-
-    if (!battleState.started) {
-        dotsElement.innerHTML = ''
-        dotsElement.classList.remove('active')
-        return
-    }
-
-    dotsElement.classList.add('active')
-    dotsElement.innerHTML = [0, 1, 2].map((index) => {
-        const pokemon = team[index]
-        const defeatedClass = pokemon && pokemon.defeated ? ' defeated' : ''
-
-        return `<span class="teamDot${defeatedClass}"></span>`
-    }).join('')
+    window.BATTLE_RENDER.updateTeamDots({
+        side,
+        team: side === 'player' ? battleState.playerTeam : battleState.machineTeam,
+        isStarted: battleState.started
+    })
 }
 
 const finishThreeVsThreeBattle = (winner) => {
@@ -1929,41 +1458,20 @@ const restartJourney = () => {
 
 const animateDefeat = (loserSide, resultMessage) => {
     const settings = pokemonSides[loserSide]
-    const container = document.getElementById(settings.containerId)
 
-    if (!container) {
-        return
-    }
-
-    const smokeImages = [1, 2, 3]
-
-    smokeImages.forEach((image, index) => {
-        const timer = setTimeout(() => {
-            container.innerHTML = `<img class='${settings.smokeClass}' src='../../assets/img/smoke${image}.png'>`
-        }, 400 + index * 400)
-
-        battleTimers.push(timer)
+    window.BATTLE_RENDER.animateBattleResult({
+        containerId: settings.containerId,
+        smokeClass: settings.smokeClass,
+        resultMessage,
+        registerTimer: (timer) => {
+            battleTimers.push(timer)
+        }
     })
-
-    const winnerTimer = setTimeout(() => {
-        container.innerHTML = `
-            <marquee direction="right" behavior="alternate" class="winnerMensage">
-                ${resultMessage}
-            </marquee>
-        `
-    }, 1700)
-
-    battleTimers.push(winnerTimer)
 }
 
 const showFinalTrainerResult = (winnerSide) => {
     const settings = pokemonSides[winnerSide]
-    const container = document.getElementById(settings.containerId)
     const trainer = getCurrentTrainer()
-
-    if (!container) {
-        return
-    }
 
     const trainerImage = winnerSide === 'player'
         ? '../../assets/img/ash_win.png'
@@ -1978,11 +1486,13 @@ const showFinalTrainerResult = (winnerSide) => {
             return
         }
 
-        container.innerHTML = `
-            <div class="battleResultTrainer ${resultClass}">
-                ${trainerImage ? `<img src="${trainerImage}" alt="${trainerAlt}">` : `<span>${getOpponentTrainerName()} won</span>`}
-            </div>
-        `
+        window.BATTLE_RENDER.renderFinalTrainerResult({
+            containerId: settings.containerId,
+            trainerImage,
+            trainerAlt,
+            resultClass,
+            fallbackText: `${getOpponentTrainerName()} won`
+        })
     }, 2000)
 
     battleTimers.push(resultTimer)
@@ -1993,65 +1503,19 @@ const showJourneyVictoryProgress = (trainerImage, trainerAlt, journeyProgress) =
     updateTeamDots('player')
     updateTeamDots('opponent')
 
-    const playerContainer = document.getElementById(pokemonSides.player.containerId)
-    const opponentContainer = document.getElementById(pokemonSides.opponent.containerId)
-    const textScreen = document.getElementById('textScreen')
-    const ball = document.getElementById('ball')
+    window.BATTLE_RENDER.clearBattleStage({
+        playerContainerId: pokemonSides.player.containerId,
+        opponentContainerId: pokemonSides.opponent.containerId,
+        hideBall: true
+    })
 
-    if (playerContainer) {
-        playerContainer.innerHTML = ''
-    }
-
-    if (opponentContainer) {
-        opponentContainer.innerHTML = ''
-    }
-
-    if (ball) {
-        ball.style.display = 'none'
-    }
-
-    if (textScreen) {
-        textScreen.innerHTML = `
-            <div class="journeyVictoryScreen">
-                <img class="ashWinResult" src="${trainerImage}" alt="${trainerAlt}">
-                <p class="journeyVictoryText">You won!</p>
-                <div class="journeyProgressPanel">
-                    ${journeyProgress}
-                </div>
-            </div>
-        `
-        textScreen.style.display = 'block'
-
+    if (window.BATTLE_RENDER.renderJourneyVictoryProgress({ trainerImage, trainerAlt, journeyProgress })) {
         const xSoundTimer = setTimeout(() => {
             playSound('xEnter')
         }, 1000)
 
         battleTimers.push(xSoundTimer)
     }
-}
-
-const getJourneyProgressMarkup = () => {
-    const defeatedIndexes = new Set([...journeyState.completedTrainers])
-    const trainer = getCurrentTrainer()
-
-    if (trainer) {
-        defeatedIndexes.add(trainer.index)
-    }
-
-    return `
-        <p class="journeyProgressTitle">Next challenge:</p>
-        <div class="journeyFaceRow">
-            ${journeyState.trainers.map((trainer) => {
-                const defeatedClass = defeatedIndexes.has(trainer.index) ? ' defeated' : ''
-
-                return `
-                    <div class="journeyFace${defeatedClass}" title="${trainer.name}">
-                        <img src="${trainer.face}" alt="${trainer.name}">
-                    </div>
-                `
-            }).join('')}
-        </div>
-    `
 }
 
 const showChampionCelebration = () => {
@@ -2062,58 +1526,19 @@ const showChampionCelebration = () => {
     updateTeamDots('player')
     updateTeamDots('opponent')
 
-    const playerContainer = document.getElementById(pokemonSides.player.containerId)
-    const opponentContainer = document.getElementById(pokemonSides.opponent.containerId)
-    const textScreen = document.getElementById('textScreen')
-    const ball = document.getElementById('ball')
-
-    if (playerContainer) {
-        playerContainer.innerHTML = ''
-    }
-
-    if (opponentContainer) {
-        opponentContainer.innerHTML = ''
-    }
-
-    if (ball) {
-        ball.style.display = 'none'
-    }
-
-    if (textScreen) {
-        textScreen.innerHTML = `
-            <p class="championTitle">Congratulations, Champion!</p>
-            <p class="championSubtitle">You defeated all 6 trainers and completed the journey.</p>
-            <img src="../../assets/img/ash-champion.png" class="screenText championAsh" alt="Ash champion">
-        `
-        textScreen.style.display = 'block'
-    }
-}
-
-const chooseFirstTurn = (pokemon1, pokemon2) => {
-    if (pokemon1.stats.speed > pokemon2.stats.speed) {
-        return 'player'
-    }
-
-    if (pokemon2.stats.speed > pokemon1.stats.speed) {
-        return 'opponent'
-    }
-
-    return Math.random() < 0.5 ? 'player' : 'opponent'
+    window.BATTLE_RENDER.clearBattleStage({
+        playerContainerId: pokemonSides.player.containerId,
+        opponentContainerId: pokemonSides.opponent.containerId,
+        hideBall: true
+    })
+    window.BATTLE_RENDER.renderChampionCelebration()
 }
 
 const getFirstTurnMessage = () => {
     const currentPokemon = battleState[battleState.currentTurn]
     const opponentPokemon = battleState[getOpponentSide(battleState.currentTurn)]
 
-    if (currentPokemon.stats.speed === opponentPokemon.stats.speed) {
-        return `${currentPokemon.name} starts by luck after a speed tie!`
-    }
-
-    return `${currentPokemon.name} starts for being faster!`
-}
-
-const getOpponentSide = (side) => {
-    return side === 'player' ? 'opponent' : 'player'
+    return window.BATTLE_LOGIC.getFirstTurnMessage(currentPokemon, opponentPokemon)
 }
 
 const resetBattle = () => {
@@ -2181,22 +1606,8 @@ const resetBattleForJourneySetup = () => {
     setBattleButton('START 3x3', true, false)
 }
 
-const clearBattleLog = () => {
-    const battleLog = document.getElementById('battleLog')
-
-    if (battleLog) {
-        battleLog.innerHTML = ''
-    }
-}
-
 const setBattleButton = (text, disabled, hidden) => {
-    const button = document.querySelector('.toBattle')
-
-    if (button) {
-        button.textContent = text
-        button.disabled = disabled
-        button.style.display = hidden ? 'none' : 'inline-block'
-    }
+    window.BATTLE_RENDER.setBattleButton(text, disabled, hidden)
 }
 
 const showTrainerIntro = (trainer) => {
@@ -2205,73 +1616,25 @@ const showTrainerIntro = (trainer) => {
 }
 
 const hideTrainerIntro = () => {
-    const textScreen = document.getElementById('textScreen')
-
-    if (textScreen) {
-        textScreen.style.display = 'none'
-    }
+    window.BATTLE_RENDER.hideTrainerIntro()
 }
 
 const showJourneyWelcome = () => {
-    const textScreen = document.getElementById('textScreen')
-
-    if (!textScreen) {
-        return
-    }
-
-    textScreen.innerHTML = `
-        <p class="galeIntroText">Welcome to the great Pokemon challenge. Good luck!</p>
-        <div class="ashIntroWrap">
-            <img src="../../assets/img/enter_ash.png" class="screenText trainerGale" alt="Ash entering the Pokemon challenge">
-            <span class="desktopAshCue" aria-hidden="true">
-                <img src="../../assets/img/pokeballPixel.png" class="desktopAshBall" alt="">
-                <span class="desktopAshArrow">></span>
-            </span>
-        </div>
-    `
-    textScreen.style.display = 'block'
+    window.BATTLE_RENDER.renderJourneyWelcome()
     updateIdleBallMode()
 }
 
 const showJourneyContinue = () => {
-    const textScreen = document.getElementById('textScreen')
-
-    if (!textScreen) {
-        return
-    }
-
-    textScreen.innerHTML = `
-        <p class="galeIntroText continueIntroText">Let's continue the journey?</p>
-        <div class="ashIntroWrap">
-            <img src="../../assets/img/ash-cry.png" class="screenText trainerGale" alt="Ash returns to continue the Pokemon challenge">
-            <span class="desktopAshCue" aria-hidden="true">
-                <img src="../../assets/img/pokeballPixel.png" class="desktopAshBall" alt="">
-                <span class="desktopAshArrow">>></span>
-            </span>
-        </div>
-    `
-    textScreen.style.display = 'block'
+    window.BATTLE_RENDER.renderJourneyContinue()
     updateIdleBallMode()
 }
 
 const updateIdleBallMode = () => {
-    const ball = document.getElementById('ball')
-
-    if (!ball) {
-        return
-    }
-
-    ball.classList.toggle('desktopIdleBall', window.innerWidth > 1100)
+    window.BATTLE_RENDER.updateIdleBallMode(window.innerWidth > 1100)
 }
 
 const updateContinueCounter = () => {
-    const continueCounter = document.getElementById('continueCounter')
-
-    if (!continueCounter) {
-        return
-    }
-
-    continueCounter.textContent = `CONTINUE x${getRemainingContinues()}`
+    window.BATTLE_RENDER.updateContinueCounter(getRemainingContinues())
 }
 
 const getRemainingContinues = () => {
@@ -2283,198 +1646,69 @@ const hasContinuesAvailable = () => {
 }
 
 const updateScreenTrainerIntro = (showChallenge = false, selectedTrainer = getCurrentTrainer()) => {
-    const trainer = selectedTrainer
-    const textScreen = document.getElementById('textScreen')
-
-    if (!textScreen) {
-        return
-    }
-
-    if (!trainer) {
-        textScreen.innerHTML = '<p class="galeIntroText">Journey complete!</p>'
-        return
-    }
-
-    const challengeMarkup = showChallenge
-        ? `
-            <p class="trainerAiText ${trainer.difficulty}">${capitalize(trainer.difficulty)} AI</p>
-            <p class="trainerChallengeText"></p>
-        `
-        : ''
-
-    textScreen.innerHTML = `
-        <p class="galeIntroText">${trainer.name} is challenging you!</p>
-        ${challengeMarkup}
-        <img src="${trainer.image}" class="screenText trainerGale${showChallenge ? ' trainerChallengeImage' : ''}" alt="Trainer ${trainer.name}">
-    `
-    textScreen.style.display = 'block'
-
-    if (showChallenge) {
-        typeTrainerChallenge(trainer.challengeText)
-    }
+    window.BATTLE_RENDER.renderTrainerIntro({
+        trainer: selectedTrainer,
+        showChallenge,
+        registerTimer: (timer) => {
+            battleTimers.push(timer)
+        }
+    })
 }
 
-const typeTrainerChallenge = (text) => {
-    const challenge = document.querySelector('.trainerChallengeText')
+const getJourneyProgressMarkup = () => {
+    const defeatedIndexes = new Set([...journeyState.completedTrainers])
+    const trainer = getCurrentTrainer()
 
-    if (!challenge) {
-        return
+    if (trainer) {
+        defeatedIndexes.add(trainer.index)
     }
 
-    const message = `"${text}"`
-    let currentIndex = 0
-
-    challenge.textContent = ''
-
-    const typeNextLetter = () => {
-        currentIndex += 1
-        challenge.textContent = message.slice(0, currentIndex)
-
-        if (currentIndex >= message.length) {
-            return
-        }
-
-        const timer = setTimeout(typeNextLetter, 42)
-        battleTimers.push(timer)
-    }
-
-    typeNextLetter()
+    return window.BATTLE_RENDER.getJourneyProgressMarkup({
+        trainers: journeyState.trainers,
+        defeatedIndexes
+    })
 }
 
 const setBattleMenuMode = (mode) => {
-    const menuTitle = document.querySelector('.txtMenu')
-    const slots = document.getElementById('playerTeamSlots')
-    const randomButton = document.querySelector('.randomTeamButton')
-    const teamSummary = document.getElementById('teamSummary')
-    const potionControl = document.getElementById('potionControl')
-    const battlePanel = document.querySelector('.battlePanel')
     const isSetup = mode === 'setup'
 
     if (mode === 'setup') {
         showJourneyWelcome()
     }
 
-    if (menuTitle) {
-        menuTitle.textContent = isSetup ? 'Choose your 3 Pokémon team:' : 'Your team:'
-        menuTitle.style.display = 'block'
-    }
-
-    if (slots) {
-        slots.style.display = isSetup ? 'grid' : 'none'
-    }
-
-    if (randomButton) {
-        randomButton.style.display = isSetup ? 'inline-block' : 'none'
-    }
-
-    if (teamSummary) {
-        renderTeamSummary()
-        teamSummary.style.display = isSetup ? 'none' : 'flex'
-    }
-
-    if (potionControl) {
-        potionControl.style.display = isSetup ? 'none' : 'inline-flex'
-        updatePotionControl()
-    }
-
-    if (battlePanel) {
-        battlePanel.classList.toggle('battlePanelActive', !isSetup)
-    }
+    renderTeamSummary()
+    updatePotionControl()
+    window.BATTLE_RENDER.setBattleMenuMode({ isSetup })
 }
 
 const renderTeamSummary = () => {
-    const teamSummary = document.getElementById('teamSummary')
-
-    if (!teamSummary) {
-        return
-    }
-
-    const teamSprites = getTeamSlotIndexes().map((index) => {
-        const pokemon = battleState.playerTeam[index]
-
-        if (!pokemon) {
-            return ''
-        }
-
-        const isActive = index === battleState.playerActiveIndex
-        const isSelectable = battleState.waitingForPlayerSwitch && !pokemon.defeated && !isActive
-        const defeatedClass = pokemon.defeated ? ' defeated' : ''
-        const selectableClass = isSelectable ? ' selectable' : ''
-        const activeClass = isActive ? ' active' : ''
-        const disabledAttribute = isSelectable ? '' : ' disabled'
-
-        return `
-            <button class="teamSummaryPokemonSlot${defeatedClass}${selectableClass}${activeClass}" type="button" onclick="switchPlayerPokemon(${index})" title="${pokemon.name} HP ${pokemon.currentHp}/${pokemon.maxHp}"${disabledAttribute}>
-                <img class="teamSummaryPokemon" src="${pokemon.sprites.front}" alt="${pokemon.name}">
-            </button>
-        `
-    }).join('')
-
-    teamSummary.innerHTML = `
-        <div class="teamSummarySprites">${teamSprites}</div>
-    `
+    window.BATTLE_RENDER.renderTeamSummary({
+        team: battleState.playerTeam,
+        slotIndexes: getTeamSlotIndexes(),
+        activeIndex: battleState.playerActiveIndex,
+        waitingForPlayerSwitch: battleState.waitingForPlayerSwitch
+    })
 }
 
 const setSearchControls = (disabled) => {
-    const controls = document.querySelectorAll('.teamSlotInput, .teamSlotAdd, .teamSlotRemove')
-    const shouldDisable = disabled || battleState.started
-
-    controls.forEach((control) => {
-        control.disabled = shouldDisable
-    })
-
-    setRandomTeamButton(shouldDisable)
+    window.BATTLE_RENDER.setSearchControls(disabled, battleState.started)
 }
 
 const setRandomTeamButton = (disabled) => {
-    const button = document.querySelector('.randomTeamButton')
-
-    if (button) {
-        button.disabled = disabled
-    }
+    window.BATTLE_RENDER.setRandomTeamButton(disabled)
 }
 
 const clearBattleScreen = ({ showIdleBall = true, showWelcome = true } = {}) => {
-    const playerContainer = document.getElementById(pokemonSides.player.containerId)
-    const opponentContainer = document.getElementById(pokemonSides.opponent.containerId)
-    const textScreen = document.getElementById('textScreen')
-    const ball = document.getElementById('ball')
-    const power = document.getElementById('powerId')
-    const inputs = document.querySelectorAll('.teamSlotInput')
-
-    if (playerContainer) {
-        playerContainer.innerHTML = ''
-    }
-
-    if (opponentContainer) {
-        opponentContainer.innerHTML = ''
-    }
-
-    if (textScreen) {
-        textScreen.style.display = showWelcome ? 'block' : 'none'
-    }
-
-    if (ball) {
-        ball.style.display = showIdleBall ? 'inline-block' : 'none'
-        ball.classList.remove('desktopIdleBall')
-    }
-
-    if (power) {
-        power.style.color = 'rgb(165, 165, 165)'
-    }
+    window.BATTLE_RENDER.clearBattleScreen({
+        playerContainerId: pokemonSides.player.containerId,
+        opponentContainerId: pokemonSides.opponent.containerId,
+        showIdleBall,
+        showWelcome
+    })
 
     if (showWelcome) {
         showJourneyWelcome()
     }
-
-    inputs.forEach((input) => {
-        input.value = ''
-    })
-}
-
-const scheduleRender = (side, delay, callback) => {
-    const timer = setTimeout(callback, delay)
-    renderTimers[side].push(timer)
 }
 
 const clearSideTimers = (side) => {
@@ -2487,79 +1721,8 @@ const clearBattleTimers = () => {
     battleTimers.length = 0
 }
 
-const clearMessage = () => {
-    document.getElementById('winner').innerHTML = ''
-}
-
-const showMessage = (message, type = 'info') => {
-    addBattleLog(message, type)
-}
-
-const getBallImage = (image) => {
-    return `../../assets/img/ballOpen${image}.png`
-}
-
-const formatMoveName = (value) => {
-    return value
-        .split('-')
-        .map((word) => capitalize(word))
-        .join(' ')
-}
-
-const playSound = (soundName) => {
-    if (battleState.muted) {
-        return
-    }
-
-    const sound = sounds[soundName]
-
-    if (!sound) {
-        return
-    }
-
-    sound.currentTime = 0
-
-    const playPromise = sound.play()
-
-    if (playPromise) {
-        playPromise.catch(() => {})
-    }
-}
-
-const toggleMute = () => {
-    battleState.muted = !battleState.muted
-
-    if (battleState.muted) {
-        stopAllSounds()
-    }
-
-    updateMuteButton()
-}
-
-const stopAllSounds = () => {
-    Object.values(sounds).forEach((sound) => {
-        sound.pause()
-        sound.currentTime = 0
-    })
-}
-
-const updateMuteButton = () => {
-    const button = document.getElementById('muteButton')
-
-    if (!button) {
-        return
-    }
-
-    button.classList.toggle('muted', battleState.muted)
-    button.setAttribute('aria-pressed', battleState.muted ? 'true' : 'false')
-}
-
 const wait = (time) => {
     return new Promise((resolve) => setTimeout(resolve, time))
-}
-
-const capitalize = (value) => {
-    return value.charAt(0).toUpperCase() + value.slice(1)
 }
 
 window.addEventListener('load', () => {
